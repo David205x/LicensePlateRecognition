@@ -42,24 +42,21 @@ def find_rect(contour):
 
 
 def license_location(img, original_image):
-
     contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     possible_areas = []
 
     # TODO: 添加一个宽高比的判断，和颜色等权重
 
-
     for c in contours:
         rect = find_rect(c)
-        area = (rect[2] - rect[0]) * (rect[3] - rect[1])
-
-        if rect[3] - rect[1] == 0:
-            ratio = 0
-        else:
-            ratio = (rect[2] - rect[0]) / (rect[3] - rect[1])
-
-        if ratio < 2 or ratio > 5 or area < 1440:
+        height = rect[3] - rect[1]
+        width = rect[2] - rect[0]
+        area = width * height
+        if height == 0:
+            continue
+        ratio = width / height
+        if ratio < 2 or ratio > 5 or area < 1500 or width < 80 or height < 30:
             continue
 
         possible_areas.append([rect, area, ratio])
@@ -94,8 +91,28 @@ def license_location(img, original_image):
             index_max = i
             weight_max = weight_param2
 
-    # return possible_areas[index_max][0]
-    return possible_areas
+    return possible_areas[index_max][0]
+    # return possible_areas
+
+
+def cast_shadows(image):
+    GrayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    ret, result = cv2.threshold(GrayImage, 0x80, 0xff, cv2.THRESH_BINARY)
+    (height, width) = result.shape[0:2]
+    dot = [0 for w in range(0, width)]
+
+    for j in range(0, width):
+        for i in range(0, height):
+            if result[i, j] == 0:
+                dot[j] += 1
+                result[i, j] = 0xff
+
+    for j in range(0, width):
+        for i in range((height - dot[j]), height):
+            result[i, j] = 0
+
+    return result
+
 
 class LPImage(object):
     img = None
@@ -106,8 +123,6 @@ class LPImage(object):
         self.image_path = path
         try:
             self.img = plt.imread(self.image_path)
-            # tmp = cv2.resize(self.img, (400, 400 * self.img.shape[0] / self.img.shape[1]))
-            # self.img = tmp
         except Exception as e:
             print(e)
         finally:
@@ -138,9 +153,19 @@ class LPImage(object):
 
         rect = license_location(opening_img, self.img)
 
-        for r in rect:
-            cv2.rectangle(self.img, (r[0][0], r[0][1]), (r[0][2], r[0][3]), (255, 255, 0), 2)
+        offset = 4
 
-        # cv2.rectangle(self.img, (rect[0], rect[1]), (rect[2], rect[3]), (255, 255, 0), 2)
+        # for r in rect:
+        #     cv2.rectangle(self.img,
+        #                   (r[0][0] - offset, r[0][1] - offset),
+        #                   (r[0][2] + offset, r[0][3] + offset),
+        #                   (255, 255, 0), 2)
+
+        x, y, w, h = rect[0] - offset, rect[1] - offset, rect[2] - rect[0] + 2 * offset, rect[3] - rect[1] + 2 * offset
+        shadow_part = self.img[y: y + h, x: x + w].copy()
+        show_image(cast_shadows(shadow_part))
+
+        cv2.rectangle(self.img, (rect[0] - offset, rect[1] - offset), (rect[2] + offset, rect[3] + offset),
+                      (255, 255, 0), 2)
 
         show_image(self.img)

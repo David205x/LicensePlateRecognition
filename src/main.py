@@ -1,8 +1,6 @@
 import PyQt5
 
-from src.LPImage.LPImagePlus import LPImagePlus
-from src.LPImage.LPImage import LPImage
-
+from src.LPLocator.LPLocator import LPLocator
 from CLPD.CLPDImage import CLPDImage
 from CSVReader.CSVReader import CSVReader
 
@@ -12,7 +10,7 @@ if __name__ == "__main__":
 
     print("--License Plate Recognition--")
 
-    desired_csv_size = 200
+    desired_csv_size = 100
     cr = CSVReader(desired_csv_size)
 
     col_titles = cr.get_csv_title()
@@ -20,12 +18,18 @@ if __name__ == "__main__":
 
     imgs = []
 
-    for i in range(desired_csv_size):
-        img = CLPDImage(BASE_DATASET_PATH + str(i) + '.jpg')
-        img.get_csv_data(csv_data[img.get_id()])
+    for i in range(86, 91):
 
-        img.preprocess()
-        img.write_all()
+        current_file = BASE_DATASET_PATH + str(i) + '.jpg'
+        lpltr = LPLocator(current_file)
+        # img = CLPDImage(current_file)
+        #
+        # img.get_csv_data(csv_data[img.get_id()])
+        #
+        # img.preprocess()
+        # img.write_all()
+
+        lpltr.process()
 
     # seq = 1
     # size = 9

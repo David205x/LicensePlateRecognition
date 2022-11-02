@@ -56,10 +56,12 @@ def license_location(img, original_image):
         if height == 0:
             continue
         ratio = width / height
-        if ratio < 2 or ratio > 5 or area < 1500 or width < 80 or height < 30:
+        if ratio < 2 or ratio > 5 or area < 1500:
             continue
 
         possible_areas.append([rect, area, ratio])
+
+    possible_areas = sorted(possible_areas, key=lambda x: x[2])[-3:]
 
     # 选取最蓝的部分作为匹配结果
     weight_max, index_max = -1, -1
@@ -68,14 +70,18 @@ def license_location(img, original_image):
     # show_image(h)
 
     for i in range(len(possible_areas)):
-        b = original_image[
+        roi = original_image[
             possible_areas[i][0][1]:possible_areas[i][0][3],
             possible_areas[i][0][0]:possible_areas[i][0][2]
             ]
 
-        hsv = cv2.cvtColor(b, cv2.COLOR_RGB2HSV)
-        lower = np.array([0x80, 0x70, 0x70])
-        upper = np.array([0xa0, 0xff, 0xff])
+        # hsv = cv2.cvtColor(roi, cv2.COLOR_RGB2HSV)
+        # lower = np.array([0x40, 0x50, 0x40])
+        # upper = np.array([0xff, 0x8c, 0xff])
+
+        hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+        lower = np.array([100, 47, 47])
+        upper = np.array([124, 255, 255])
 
         # 为所有备选区域绘制蒙版
         masks = cv2.inRange(hsv, lower, upper)
@@ -91,27 +97,30 @@ def license_location(img, original_image):
             index_max = i
             weight_max = weight_param2
 
-    return possible_areas[index_max][0]
-    # return possible_areas
+    if len(possible_areas) != 0:
+        return possible_areas[index_max][0]
+        # return possible_areas
+    else:
+        return None
 
 
-def cast_shadows(image):
-    GrayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    ret, result = cv2.threshold(GrayImage, 0x80, 0xff, cv2.THRESH_BINARY)
-    (height, width) = result.shape[0:2]
-    dot = [0 for w in range(0, width)]
-
-    for j in range(0, width):
-        for i in range(0, height):
-            if result[i, j] == 0:
-                dot[j] += 1
-                result[i, j] = 0xff
-
-    for j in range(0, width):
-        for i in range((height - dot[j]), height):
-            result[i, j] = 0
-
-    return result
+# def cast_shadows(image):
+#     GrayImage = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+#     ret, result = cv2.threshold(GrayImage, 0x80, 0xff, cv2.THRESH_BINARY)
+#     (height, width) = result.shape[0:2]
+#     dot = [0 for w in range(0, width)]
+#
+#     for j in range(0, width):
+#         for i in range(0, height):
+#             if result[i, j] == 0:
+#                 dot[j] += 1
+#                 result[i, j] = 0xff
+#
+#     for j in range(0, width):
+#         for i in range((height - dot[j]), height):
+#             result[i, j] = 0
+#
+#     return result
 
 
 class LPImage(object):
@@ -134,8 +143,9 @@ class LPImage(object):
 
     def process(self):
 
+        image = self.img
         # 分离HSV通道，提取S（饱和度通道）作为基准图像
-        image = channel_extraction(self.img)
+        image = channel_extraction(image)
         # 以3x3的矩形核进行礼帽-黑帽操作，去毛刺
         image = denoisilization(image)
         # 以OTSU法对图形进行阈值操作，完成二值化
@@ -153,19 +163,21 @@ class LPImage(object):
 
         rect = license_location(opening_img, self.img)
 
-        offset = 4
+        if rect is not None:
 
-        # for r in rect:
-        #     cv2.rectangle(self.img,
-        #                   (r[0][0] - offset, r[0][1] - offset),
-        #                   (r[0][2] + offset, r[0][3] + offset),
-        #                   (255, 255, 0), 2)
+            offset = 4
 
-        x, y, w, h = rect[0] - offset, rect[1] - offset, rect[2] - rect[0] + 2 * offset, rect[3] - rect[1] + 2 * offset
-        shadow_part = self.img[y: y + h, x: x + w].copy()
-        show_image(cast_shadows(shadow_part))
+            # for r in rect:
+            #     cv2.rectangle(self.img,
+            #                   (r[0][0] - offset, r[0][1] - offset),
+            #                   (r[0][2] + offset, r[0][3] + offset),
+            #                   (255, 255, 0), 2)
 
-        cv2.rectangle(self.img, (rect[0] - offset, rect[1] - offset), (rect[2] + offset, rect[3] + offset),
-                      (255, 255, 0), 2)
+            # x, y, w, h = rect[0] - offset, rect[1] - offset, rect[2] - rect[0] + 2 * offset, rect[3] - rect[1] + 2 * offset
+            # shadow_part = self.img[y: y + h, x: x + w].copy()
+            # show_image(cast_shadows(shadow_part))
 
-        show_image(self.img)
+            cv2.rectangle(self.img, (rect[0] - offset, rect[1] - offset), (rect[2] + offset, rect[3] + offset),
+                          (255, 255, 0), 2)
+
+            show_image(self.img)

@@ -26,14 +26,14 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "last_opened_file_path": "E:/code/人工智能导论/LicensePlateRecognition/LicensePlateRecognition/src/LPImage"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/code/人工智能导论/LicensePlateRecognition/LicensePlateRecognition/src/LPImage&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="E:\code\人工智能导论\LicensePlateRecognition\LicensePlateRecognition\src\LPImage" />
@@ -75,7 +75,8 @@
       <option name="presentableId" value="Default" />
       <updated>1667182584904</updated>
       <workItem from="1667182601400" duration="1066000" />
-      <workItem from="1667201429221" duration="57809000" />
+      <workItem from="1667201429221" duration="60320000" />
+      <workItem from="1667373295116" duration="7054000" />
     </task>
     <servers />
   </component>
@@ -95,6 +96,6 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/LicensePlateRecognition$main.coverage" NAME="main Coverage Results" MODIFIED="1667182763392" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
-    <SUITE FILE_PATH="coverage/LicensePlateRecognition$LicensePlateRecognition.coverage" NAME="LicensePlateRecognition Coverage Results" MODIFIED="1667351796002" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
+    <SUITE FILE_PATH="coverage/LicensePlateRecognition$LicensePlateRecognition.coverage" NAME="LicensePlateRecognition Coverage Results" MODIFIED="1667386329720" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
   </component>
 </project>

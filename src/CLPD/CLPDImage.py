@@ -134,6 +134,7 @@ class CLPDImage(object):
 
         try:
             self.img = plt.imread(self.image_path)
+
             path_var = self.image_path.split('/')
 
             file_data = (path_var[-1].split('.'))

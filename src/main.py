@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     print("--License Plate Recognition--")
 
-    desired_csv_size = 100
+    desired_csv_size = 300
     cr = CSVReader(desired_csv_size)
 
     col_titles = cr.get_csv_title()
@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     imgs = []
 
-    for i in range(86, 91):
+    for i in range(11, 16):
 
         current_file = BASE_DATASET_PATH + str(i) + '.jpg'
         lpltr = LPLocator(current_file)

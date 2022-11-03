@@ -21,7 +21,7 @@ def preprocess(img_gray, img_HSV, img_B, img_R):
 
     for i in range(img_h):
         for j in range(img_w):
-            if ((img_HSV[:, :, 0][i, j] - 115) ** 2 < 0xe1) and (img_B[i, j] > 70) and (img_R[i, j] < 40):
+            if ((img_HSV[:, :, 0][i, j] - 115) ** 2 < 0xe1) and (img_B[i, j] > 80) and (img_R[i, j] < 40):
                 img_gray[i, j] = 255
             else:
                 img_gray[i, j] = 0
@@ -41,14 +41,15 @@ def preprocess(img_gray, img_HSV, img_B, img_R):
 
 
 def find_lp(img_bin):
-    # 检测所有外轮廓，只留矩形的四个顶点
+
     contours, _ = cv2.findContours(img_bin, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     if len(contours) == 0:
         return None
-    # 形状及大小筛选校验
+
     det_x_max = -1
     det_y_max = -1
     index = 0
+
     for i in range(len(contours)):
         x_min = np.min(contours[i][:, :, 0])
         x_max = np.max(contours[i][:, :, 0])
@@ -73,7 +74,9 @@ def find_lp(img_bin):
 
 def locate_rect(points, offset=0):
 
-    box = np.int0(cv2.boxPoints(cv2.minAreaRect(points)))
+    rect = cv2.minAreaRect(points)
+    ang = rect[-1]
+    box = np.int0(cv2.boxPoints(rect))
 
     lx = np.min(box[:, 0])
     ly = box[:, 1][np.where(box[:, 0] == lx)][0]
@@ -87,17 +90,17 @@ def locate_rect(points, offset=0):
     by = np.max(box[:, 1])
     bx = box[:, 0][np.where(box[:, 1] == by)][0]
 
+    # print(box)
     # print(f'\t\t({tx}, {ty})')
     # print(f'({lx}, {ly})\t\t({rx}, {ry})')
     # print(f'\t\t({bx}, {by})')
 
-    # TODO: FIX THIS APRT FOR IMG 13.JPG
-    v = np.array([
-            [tx, ty],
-            [rx, ry],
-            [bx, by],
-            [lx, ly]
-        ])
+    v = []
+    if ang >= 45:
+        v = np.array([[lx, ly], [tx, ty], [rx, ry], [bx, by]])
+    else:
+        v = np.array([[tx, ty], [rx, ry], [bx, by], [lx, ly]])
+
     r = [v[0][0] - offset, v[0][1] - offset, v[2][0] + offset, v[2][1] + offset]
 
     if r[0] > r[2]:
@@ -138,7 +141,7 @@ def perspective_warp(img, vertices):
 def draw_rect(img, r, v, stroke_width, offset=0):
     R, G, B = random.randint(192, 256), random.randint(192, 256), random.randint(192, 256)
     color = (R, G, B)
-    icolor = (0xff -R, 0xff - G, 0xff - B)
+    icolor = (0xff - R, 0xff - G, 0xff - B)
 
     cv2.rectangle(img,
                   (r[0] - offset, r[1] - offset),

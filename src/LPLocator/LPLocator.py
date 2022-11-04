@@ -35,7 +35,7 @@ def preprocess(img_gray, img_HSV, img_B, img_R):
     img_close = cv2.GaussianBlur(img_close, (5, 5), 0)
     _, img_bin = cv2.threshold(img_close, 115, 255, cv2.THRESH_BINARY)
 
-    # show_gray_img(img_bin)
+    show_gray_img(img_bin)
 
     return img_bin
 
@@ -46,8 +46,8 @@ def find_lp(img_bin):
     if len(contours) == 0:
         return None
 
-    det_x_max = -1
-    det_y_max = -1
+    w_max = -1
+    h_max = -1
     index = 0
 
     for i in range(len(contours)):
@@ -55,16 +55,16 @@ def find_lp(img_bin):
         x_max = np.max(contours[i][:, :, 0])
         y_min = np.min(contours[i][:, :, 1])
         y_max = np.max(contours[i][:, :, 1])
-        det_x = x_max - x_min
-        det_y = y_max - y_min
-        if det_y == 0:
+        w = x_max - x_min
+        h = y_max - y_min
+        if h == 0:
             return None
-        ratio = det_x / det_y
-        area = det_x * det_y
+        ratio = w / h
+        area = w * h
 
-        if (ratio > 3) and (ratio < 5) and (det_x > det_x_max) and (det_y > det_y_max):
-            det_y_max = det_y
-            det_x_max = det_x
+        if (ratio > 3) and (ratio < 5) and (w > w_max) and (h > h_max):
+            h_max = h
+            w_max = w
             index = i
 
     points = np.array(contours[index][:, 0])
@@ -201,6 +201,7 @@ class LPLocator(object):
         if self.w == 440 and self.h == 140:
             rect = [0, 0, 440, 140]
             vertices = rect
+
         else:
             img_gray, img_HSV, img_B, img_R = self.preprocess()
             img_bin = preprocess(img_gray, img_HSV, img_B, img_R)
@@ -211,8 +212,8 @@ class LPLocator(object):
 
             vertices, rect = locate_rect(pts, 0)
 
-        self.lp_img = perspective_warp(self.img, vertices)
-        show_image(self.lp_img)
+        # self.lp_img = perspective_warp(self.img, vertices)
+        # show_image(self.lp_img)
 
         draw_rect(self.img, rect, vertices, 3)
         show_image(self.img)

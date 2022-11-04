@@ -1,31 +1,65 @@
 import json
 import os
-from io import BytesIO
 
 import cv2
 import tensorflow as tf
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
-import IPython.display as display
 
 SLICES_ROOT = '../dataset_v2/'
 TFR_PATH = '../model/license_plate_test.tfrecords'
 
-classes = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-           'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
-           'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-           'u', 'v', 'w', 'x', 'y', 'z'}
+STD_W = 45
+STD_H = 140
+STD_D = 1
+
+classes = {'0': 0,
+           '1': 1,
+           '2': 2,
+           '3': 3,
+           '4': 4,
+           '5': 5,
+           '6': 6,
+           '7': 7,
+           '8': 8,
+           '9': 9,
+           'a': 10,
+           'b': 11,
+           'c': 12,
+           'd': 13,
+           'e': 14,
+           'f': 15,
+           'g': 16,
+           'h': 17,
+           'i': 18,
+           'j': 19,
+           'k': 20,
+           'l': 21,
+           'm': 22,
+           'n': 23,
+           'o': 24,
+           'p': 25,
+           'q': 26,
+           'r': 27,
+           's': 28,
+           't': 29,
+           'u': 30,
+           'v': 31,
+           'w': 32,
+           'x': 33,
+           'y': 34,
+           'z': 35}
 
 
 def _int64_feature(value):
-    if not isinstance(value,list) and not isinstance(value,np.ndarray):
+    if not isinstance(value, list) and not isinstance(value, np.ndarray):
         value = [value]
     return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
 
 
 def _bytes_feature(value):
-    if not isinstance(value,list) and not isinstance(value,np.ndarray):
+    if not isinstance(value, list) and not isinstance(value, np.ndarray):
         value = [value]
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
 
@@ -36,14 +70,15 @@ def generate_dataset(tfr_path):
     label_key = 0
     for label, name in enumerate(classes):
 
-        # print(f'label: {label} name: {name}')
+        print(f'label: {label} name: {name}')
 
-        path = SLICES_ROOT + name + '/'
+        path = SLICES_ROOT + str(name) + '/'
+
         for img_name in os.listdir(path):
             img_path = path + img_name
 
             original_img = Image.open(img_path)
-            shape = [140, 45, 1]
+            shape = [STD_H, STD_W, STD_D]
 
             img = original_img.convert('L').tobytes()
 
@@ -79,13 +114,26 @@ def parse_dataset(tfr_name):
     reader = tf.data.TFRecordDataset(filenames)
     parsed_dataset = reader.map(parse_records)
 
-    for data in parsed_dataset.take(20):
+    imgs = []
+    labels = []
 
-        print(f'{data["label"]}, {data["width"]}x{data["height"]}x{data["depth"]}')
+    for data in parsed_dataset:
+        # print(f'{data["label"]}, {data["width"]}x{data["height"]}x{data["depth"]}')
 
-        image_raw = data['image_raw']
+        image_raw = data['image_raw'].numpy()
+
         restored_img = tf.io.decode_raw(image_raw, tf.uint8)
-        restored_img = tf.reshape(restored_img, (data["height"], data["width"], data["depth"]))
+        restored_img = tf.reshape(restored_img, (data["height"], data["width"]))
+
+        imgs.append(restored_img)
+        labels.append(data['label'])
 
         # plt.imshow(restored_img, cmap='gray')
         # plt.show()
+
+    np_imgs = np.array(imgs)
+    np_labels = np.array(labels)
+
+    print(f'{np_imgs.shape}\n{np_labels.shape}')
+
+    return np_imgs, np_labels

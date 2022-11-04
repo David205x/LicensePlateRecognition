@@ -4,6 +4,7 @@ from src.LPLocator.LPLocator import LPLocator
 from CLPD.CLPDImage import CLPDImage
 from CSVReader.CSVReader import CSVReader
 from Dataset.DatasetManip import generate_dataset, parse_dataset
+from LPIdentification.LPIdentification import LPIdentification
 
 BASE_DATASET_PATH = '../CLPD_1200/'
 TFR_PATH = '../model/license_plate_test.tfrecords'
@@ -13,7 +14,9 @@ if __name__ == "__main__":
     print("|--License Plate Recognition--|")
 
     generate_dataset(TFR_PATH)
-    parse_dataset(TFR_PATH)
+    train_images, train_labels = parse_dataset(TFR_PATH)
+    identifier = LPIdentification(TFR_PATH, train_images, train_labels)
+    identifier.execute_identification()
 
     # desired_csv_size = 100
     # cr = CSVReader(desired_csv_size)

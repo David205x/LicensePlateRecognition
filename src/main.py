@@ -10,26 +10,28 @@ if __name__ == "__main__":
 
     print("--License Plate Recognition--")
 
-    desired_csv_size = 300
+    desired_csv_size = 100
     cr = CSVReader(desired_csv_size)
 
     col_titles = cr.get_csv_title()
     csv_data = cr.get_csv_data()
 
     imgs = []
-
-    for i in range(11, 16):
+    batch = 2
+    batch_size = 10
+    for i in range((batch - 1) * batch_size, batch * batch_size):
 
         current_file = BASE_DATASET_PATH + str(i) + '.jpg'
-        lpltr = LPLocator(current_file)
-        # img = CLPDImage(current_file)
-        #
-        # img.get_csv_data(csv_data[img.get_id()])
-        #
-        # img.preprocess()
-        # img.write_all()
 
-        lpltr.process()
+        img = CLPDImage(current_file)
+
+        img.get_csv_data(csv_data[img.get_id()])
+
+        img.preprocess()
+        # img.write_all()
+ 
+        # lpltr = LPLocator(current_file)
+        # lpltr.process()
 
     # seq = 1
     # size = 9

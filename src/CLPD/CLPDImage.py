@@ -42,6 +42,113 @@ def crop_rect(img, rect, offset=0):
     return cropped
 
 
+def analyze_shadows_plus(image_shd, dots):
+
+    height, width = image_shd.shape[0:2]
+    blocks_pos = []
+
+    sum_shd = 0
+
+    for w in range(width):
+        sum_shd += dots[w]
+    reference_height = (int(sum_shd / width) >> 3) + 2
+    print(f'sampling at h={reference_height}')
+
+    block_type = [0, 0xff]
+
+    first_block_type = cur_type = image_shd[reference_height, 0]
+    blocks_pos.append(0)
+    for w in range(width):
+        if not image_shd[reference_height, w] == cur_type:
+            blocks_pos.append(w)
+            cur_type = block_type[((cur_type + 1) % 2)]
+    blocks_pos.append(width)
+    last_block_type = cur_type
+
+    dist = []
+    for i in range(0, len(blocks_pos) - 1):
+        dist.append(blocks_pos[i + 1] - blocks_pos[i])
+    rev_dist = dist
+    rev_dist.reverse()
+
+    min_char_width = int(width / 25)
+    noise_width = int(width / 100)
+    approx_char_max = width
+    approx_char_min = int(width / 14)
+    wake_fixer = 0.6 * STD_CHAR_WIDTH
+    fixer_const = 0.33 * STD_CHAR_WIDTH
+    gaps = []
+    chars = []
+    char_counter = 0
+
+    right_start = 0
+    fixer_called = False
+
+    if len(rev_dist) < 4:
+        return None, None, None
+
+    print(rev_dist)
+
+    if last_block_type == block_type[0]:  # last block is black
+        print(f'Applying case 0x00')
+        if rev_dist[0] > wake_fixer and rev_dist[2] > wake_fixer:
+            right_start -= fixer_const
+        skipped = False
+        for d in rev_dist:
+            if not skipped:  # skip the first block
+                skipped = True
+                right_start += d
+                continue
+            if approx_char_max > d > min_char_width:
+                chars.append(d)
+                char_counter += 1
+            elif d > approx_char_max:
+                continue
+            else:
+                gaps.append(d)
+            if char_counter == 5:
+                break
+    else:  # last block is white
+        print(f'Applying case 0xff')
+        if rev_dist[1] > wake_fixer and rev_dist[3] > wake_fixer:
+            right_start -= fixer_const
+        processing_first = True
+        for d in rev_dist:
+            if processing_first:  # check whether the last block has a suitable width for a character
+                if noise_width < d < approx_char_min:
+                    right_start += d
+                else:
+                    processing_first = False
+                continue
+            if approx_char_max > d > min_char_width:
+                chars.append(d)
+                char_counter += 1
+            elif d > approx_char_max:
+                continue
+            else:
+                gaps.append(d)
+            if char_counter == 5:
+                break
+
+    print(f'{chars} | {gaps}')
+
+    char_avg = 0
+
+    if len(chars) == 0:
+        return None, None, None
+
+    for c in chars:
+        char_avg += c
+    char_avg /= len(chars)
+
+    char_avg = (char_avg + 135) / 4
+    gap_avg = char_avg * GAP_CHAR_RATIO_CONST
+
+    print(f'{right_start}, ({char_avg}\t{gap_avg}) ratio: {char_avg / gap_avg}')
+
+    return int(right_start), round(char_avg) + EXTRA_CHAR_WIDTH, math.ceil(gap_avg)
+
+
 def analyze_shadows(image_shd, dots):
     slices = []
     left_start = -1
@@ -68,8 +175,6 @@ def analyze_shadows(image_shd, dots):
     for i in range(len(slices) - 1, 0, -1):
         dist.append(slices[i] - slices[i - 1])
 
-    # print(dist)
-
     approx_width = int(width / 16)
     gaps = []
     chars = []
@@ -85,7 +190,7 @@ def analyze_shadows(image_shd, dots):
         else:
             gaps.append(d)
 
-    # print(f'{chars} | {gaps}')
+    print(f'{chars} | {gaps}')
 
     char_avg = 0
     # gap_avg = 0
@@ -181,16 +286,17 @@ class CLPDImage(object):
 
     def preprocess(self):
 
-        print(f'Processing {self.image_path}...')
+        print(f'\nProcessing {self.image_path} [{self.lp_string}]...')
         self.perspective_warp(self.rect)
 
         image_shd, dots = self.cast_shadows()
 
-        left_start, char_width, gap_width = analyze_shadows(image_shd, dots)
+        # left_start, char_width, gap_width = analyze_shadows(image_shd, dots)
+        right_start, char_width, gap_width = analyze_shadows_plus(image_shd, dots)
 
         if char_width is not None and gap_width is not None:
-            self.draw_analysis(left_start, char_width, gap_width)
-
+            # self.draw_analysis_left(left_start, char_width, gap_width)
+            pts = self.draw_analysis_right(right_start, char_width, gap_width)
         return
 
     def perspective_warp(self, rect, offset=0):
@@ -233,68 +339,81 @@ class CLPDImage(object):
 
         # return cv2.flip(result, 0), dot_flipped
         return result, dot_flipped
+    
+    def draw_analysis_right(self, right_start, char_width, gap_width):
 
-    def draw_analysis(self, left_start, char_width, gap_width):
+        height, width = self.lp_img.shape[0:2]
+
+        bigger_gap_width = int(char_width * BIGGER_GAP_CHAR_RATIO_CONST)
+
+        anchors = []
+        width_preset = [
+            right_start,
+            char_width, gap_width,
+            char_width, gap_width,
+            char_width, gap_width,
+            char_width, gap_width,
+            char_width, bigger_gap_width,
+            char_width, gap_width,
+            char_width
+        ]
+
+        cur = width
+        for w in width_preset:
+            anchors.append(cur - w)
+            cur -= w
+
+        visible = 1
+        for i in range(len(anchors) - 1):
+            if visible == 1:
+                rect = [anchors[i + 1], 0, anchors[i], height - 0]
+                offset = 6
+                # draw_rect(self.lp_img, rect, offset)
+                self.sliced_imgs.append(crop_rect(self.lp_img, rect, offset))
+            visible = (visible + 1) % 2
+
+        show_image(self.lp_img)
+
+        return anchors
+
+    def draw_analysis_left(self, left_start, char_width, gap_width):
 
         height, width = self.lp_img.shape[0:2]
 
         half_char_width = char_width >> 1
         half_gap_width = gap_width >> 1
 
-        ratio_const = BIGGER_GAP_CHAR_RATIO_CONST
-        bigger_gap_width = int(char_width * ratio_const)
+        bigger_gap_width = int(char_width * BIGGER_GAP_CHAR_RATIO_CONST)
 
         anchors = []
-        cur = half_gap_width + left_start
-        anchors.append(cur)
+        width_preset = [
+            # half_gap_width + left_start, gap_width,
+            gap_width + left_start,
+            char_width, gap_width,
+            char_width, bigger_gap_width,
+            char_width, gap_width,
+            char_width, gap_width,
+            char_width, gap_width,
+            char_width, gap_width,
+            char_width
+        ]
 
-        cur += gap_width
-        anchors.append(cur)
+        cur = 0
+        for w in width_preset:
+            anchors.append(cur + w)
+            cur += w
 
-        cur += char_width
-        anchors.append(cur)
-        cur += gap_width
-        anchors.append(cur)
-
-        cur += char_width
-        anchors.append(cur)
-        cur += bigger_gap_width
-        anchors.append(cur)
-
-        cur += char_width
-        anchors.append(cur)
-        cur += gap_width
-        anchors.append(cur)
-
-        cur += char_width
-        anchors.append(cur)
-        cur += gap_width
-        anchors.append(cur)
-
-        cur += char_width
-        anchors.append(cur)
-        cur += gap_width
-        anchors.append(cur)
-
-        cur += char_width
-        anchors.append(cur)
-        cur += gap_width
-        anchors.append(cur)
-
-        cur += char_width
-        anchors.append(cur)
-        cur += gap_width
-        anchors.append(cur)
-
-        visible = 0
+        visible = 1
         for i in range(len(anchors) - 1):
             if visible == 1:
-                rect = [anchors[i], 0, anchors[i + 1], height]
-                # draw_rect(self.lp_img, rect, 4)
-                self.sliced_imgs.append(crop_rect(self.lp_img, rect, 4))
+                vertical_crop = 20
+                rect = [anchors[i], vertical_crop, anchors[i + 1], height - vertical_crop]
+                offset = 0
+                # draw_rect(self.lp_img, rect, offset)
+                self.sliced_imgs.append(crop_rect(self.lp_img, rect, offset))
             visible = (visible + 1) % 2
 
-        # print(anchors)
+        # show_image(self.lp_img)
 
         return anchors
 
@@ -311,10 +430,13 @@ class CLPDImage(object):
             CLPDImage.imgs_saved += 1
         print(f'{self.image_path} cropped and saved.')
 
+
 LP_WIDTH = 440
 LP_HEIGHT = 140
 
+STD_CHAR_WIDTH = 45
+
 # 0.267 0.756
 GAP_CHAR_RATIO_CONST = 0.3
-BIGGER_GAP_CHAR_RATIO_CONST = 0.82
+BIGGER_GAP_CHAR_RATIO_CONST = 0.7
 EXTRA_CHAR_WIDTH = 2

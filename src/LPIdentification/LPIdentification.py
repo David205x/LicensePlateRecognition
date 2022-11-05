@@ -59,13 +59,26 @@ classes = {0: '0',
            35: 'z'}
 
 
+def show_image(img):
+    plt.imshow(img)
+    plt.show()
+
+
+def show_gray_img(img):
+    plt.imshow(img, cmap='gray')
+    plt.show()
+
 def predict(file, model):
+
     img = plt.imread(file)
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    target = tf.reshape(image_utils.img_to_array(img), (1, STD_H, STD_W))
+    img_gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+
+    target = tf.reshape(image_utils.img_to_array(img_gray), (1, STD_H, STD_W))
     pred = np.argmax(model.predict(target))
 
     print(f'{file} -> {classes.get(pred)}')
+
+    return True if file.split('/')[-1][0] == classes.get(pred) else False
 
 
 def one_hot(labels):
@@ -76,18 +89,24 @@ def one_hot(labels):
 
 
 class LPIdentification(object):
+
     save_path = '../model/LPModel.h5'
 
-    def __init__(self, tfrecord_path, train_images, train_labels):
+    def __init__(self, tfrecord_path, train_images, train_labels, test_images, test_labels):
 
         self.record_path = tfrecord_path
         self.model = None
+        self.h5_model = None
         self.train_images = train_images
         self.train_labels = train_labels
-        self.test_images = train_images[-100:]
-        self.test_labels = train_labels[-100:]
 
-        print(f'{train_images.shape} : {train_labels.shape} | {self.test_images.shape} : {self.test_labels.shape} ')
+        self.test_images = train_images[2::10]
+        self.test_labels = train_labels[2::10]
+
+        # self.test_images = test_images
+        # self.test_labels = test_labels
+
+        # print(f'{train_images.shape} : {train_labels.shape} | {self.test_images.shape} : {self.test_labels.shape} ')
 
     def mnist_cnn(self, _input_shape):
 
@@ -114,7 +133,7 @@ class LPIdentification(object):
 
         self.mnist_cnn(_input_shape=(STD_H, STD_W, STD_D))
         self.model.compile(optimizer=tf.optimizers.Adam(), loss="categorical_crossentropy", metrics=['accuracy'])
-        self.model.fit(x=_train_images, y=_train_labels, epochs=25)
+        self.model.fit(x=_train_images, y=_train_labels, epochs=20)
 
         loss, acc = self.model.evaluate(x=_test_images, y=_test_labels)
         metrics = [tf.keras.metrics.sparse_categorical_accuracy]
@@ -133,20 +152,37 @@ class LPIdentification(object):
         self.model.save(LPIdentification.save_path, overwrite=True)
         print(f'Model saved at {LPIdentification.save_path}')
 
-    def execute_identification(self):
-        # mnist = (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.mnist.load_data()
+    def load_h5_model(self, train_new):
 
-        self.train_model(self.train_images, self.train_labels, self.test_images, self.test_labels)
+        if train_new:
+            self.train_model(self.train_images, self.train_labels, self.test_images, self.test_labels)
+        else:
+            self.h5_model = tf.keras.models.load_model(LPIdentification.save_path)
 
-        h5_model = tf.keras.models.load_model(LPIdentification.save_path)
-        if h5_model is None:
+    def identify_chars(self, char_imgs):
+        result = []
+        for cimg in char_imgs:
+            target = tf.reshape(image_utils.img_to_array(cimg), (1, STD_H, STD_W))
+            pred = np.argmax(self.h5_model.predict(target))
+
+            result.append(classes.get(pred))
+
+        result.reverse()
+        return result
+
+    def training_test(self):
+        if self.model is None:
             return
 
         print('*' * 40)
         dir_list = os.listdir(TEST_IMG_STORAGE)
         dir_list.sort()
 
-        print(dir_list)
+        tot = len(dir_list)
+        corr = 0
 
         for f in dir_list:
-            predict(TEST_IMG_STORAGE + f, h5_model)
+            if predict(TEST_IMG_STORAGE + f, self.h5_model):
+                corr += 1
+        print(f'Accuracy: {int(corr * 100 /tot)}%')
+

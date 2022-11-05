@@ -70,7 +70,7 @@ def generate_dataset(tfr_path):
     label_key = 0
     for label, name in enumerate(classes):
 
-        print(f'label: {label} name: {name}')
+        # print(f'label: {label} name: {name}')
 
         path = SLICES_ROOT + str(name) + '/'
 
@@ -134,6 +134,19 @@ def parse_dataset(tfr_name):
     np_imgs = np.array(imgs)
     np_labels = np.array(labels)
 
-    print(f'{np_imgs.shape}\n{np_labels.shape}')
+    return np_imgs, np_labels, [], []
 
-    return np_imgs, np_labels
+    # train_imgs = []
+    # train_lbls = []
+    # test_imgs = []
+    # test_lbls = []
+    #
+    # split_point = 1000
+    # train_imgs = np_imgs[:split_point]
+    # train_lbls = np_labels[:split_point]
+    # test_imgs = np_imgs[split_point + 1:]
+    # test_lbls = np_labels[split_point + 1:]
+
+    # print(f'{train_imgs.shape} - {train_lbls.shape} | {test_imgs.shape} - {test_lbls.shape}')
+
+    # return train_imgs, train_lbls, test_imgs, test_lbls

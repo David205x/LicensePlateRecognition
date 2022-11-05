@@ -71,7 +71,7 @@ def find_lp(img_bin):
         ratio = w / h
         area = w * h
 
-        if (ratio > 3) and (ratio < 5) and (w > w_max) and (h > h_max):
+        if (ratio > 3) and (ratio < 4) and (w > w_max) and (h > h_max):
             h_max = h
             w_max = w
             index = i
@@ -293,27 +293,35 @@ def crop_chars(lp_img, right_start, char_width, gap_width, std=False):
 
     bigger_gap_width = int(char_width * BIGGER_GAP_CHAR_RATIO_CONST)
 
-    anchors = []
     width_preset = [
-        right_start,
-        char_width, gap_width,
-        char_width, gap_width,
-        char_width, gap_width,
-        char_width, gap_width,
-        char_width, bigger_gap_width,
-        char_width, gap_width,
-        char_width
+        [
+            right_start,
+            char_width, gap_width,
+            char_width, gap_width,
+            char_width, gap_width,
+            char_width, gap_width,
+            char_width
+        ],
+        [
+            gap_width,
+            char_width, gap_width,
+            char_width, bigger_gap_width
+        ]
     ]
 
     std_width_preset = [
-        12,
-        45, 12,
-        45, 12,
-        45, 12,
-        45, 12,
-        45, 34,
-        45, 12,
-        45
+        [
+            12,
+            45, 12,
+            45, 12,
+            45, 12,
+            45, 12,
+            45],
+        [
+            12,
+            45, 12,
+            45, 34
+        ]
     ]
 
     picked_preset = []
@@ -324,29 +332,70 @@ def crop_chars(lp_img, right_start, char_width, gap_width, std=False):
         print(f'Slicing with customized preset...')
         picked_preset = width_preset
 
-    cur = width
-    for w in picked_preset:
-        anchors.append(cur - w)
-        cur -= w
+    picked_preset = std_width_preset
 
-    sliced_imgs = []
+    r_cur = width
+    l_cur = 0
+    r_anchors = []
+    l_anchors = []
+    for w in picked_preset[0]:
+        r_anchors.append(r_cur - w)
+        r_cur -= w
+    for w in picked_preset[1]:
+        l_anchors.append(l_cur + w)
+        l_cur += w
 
-    visible = 1
-    for i in range(len(anchors) - 1):
-        if visible == 1:
-            rect = [anchors[i + 1], 0, anchors[i], height - 0]
+    sliced_digits = []
+    sliced_chars = []
+
+    r_visible = 1
+    r_success_count = 0
+    for i in range(len(r_anchors) - 1):
+        if r_visible == 1:
+            rect = [r_anchors[i + 1], 0, r_anchors[i], height - 0]
             offset = 6
             # draw_rect(self.lp_img, rect, offset)
             tmp = crop_rect(lp_gray_img, rect, offset)
+            r_success_count += 1
+            if r_success_count == 6:
+                break
             try:
                 tmp = cv2.resize(tmp, (45, 140))
             except Exception as e:
                 continue
             # show_gray_img(tmp)
-            sliced_imgs.append(tmp)
-        visible = (visible + 1) % 2
+            sliced_digits.append(tmp)
+        r_visible = (r_visible + 1) % 2
+
+    l_visible = 1
+    l_success_count = 0
+    for i in range(len(l_anchors) - 1):
+        if l_visible == 1:
+            rect = [l_anchors[i], 0, l_anchors[i + 1], height - 0]
+            offset = 6
+            # draw_rect(self.lp_img, rect, offset)
+            tmp = crop_rect(lp_gray_img, rect, offset)
+            l_success_count += 1
+            if l_success_count == 3:
+                break
+            try:
+                tmp = cv2.resize(tmp, (45, 140))
+            except Exception as e:
+                continue
+            # show_gray_img(tmp)
+            sliced_chars.append(tmp)
+        l_visible = (l_visible + 1) % 2
 
     # show_image(self.lp_img)
+
+    sliced_imgs = []
+
+    for sc in sliced_chars:
+        sliced_imgs.append(sc)
+
+    sliced_digits.reverse()
+    for sd in sliced_digits:
+        sliced_imgs.append(sd)
 
     return sliced_imgs
 
@@ -430,12 +479,13 @@ class LPLocator(object):
             pts = find_lp(img_bin)
 
             if pts is None:
-                return
+                return self.img, self.lp_img, []
 
-            vertices, rect = locate_rect(pts, 0)
+            vertices, rect = locate_rect(pts, -6)
 
         self.lp_img = perspective_warp(self.img, vertices)
-        show_image(self.lp_img)
+        draw_rect(self.img, rect, vertices, 4)
+        show_image(self.img)
         lp_shadow_img, dots = cast_shadows(self.lp_img)
         right_start, char_w, gap_w = analyze_shadows(lp_shadow_img, dots)
 
@@ -443,4 +493,4 @@ class LPLocator(object):
             slices = crop_chars(self.lp_img, right_start, char_w, gap_w, self.std_flag)
             return self.img, self.lp_img, slices
         else:
-            return self.img, self.lp_img, None
+            return self.img, self.lp_img, []

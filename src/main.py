@@ -1,3 +1,5 @@
+import os
+
 import PyQt5
 
 from src.LPLocator.LPLocator import LPLocator
@@ -25,24 +27,27 @@ if __name__ == "__main__":
     print(f'TFRecords loaded.')
     identifier = LPIdentification(TFR_PATH, train_images, train_labels, test_images, test_labels)
     print(f'Model training ready.')
+
     identifier.load_h5_model(False)
+
     print(f'Successfully loaded .h5 model.')
 
-    # batch = 2
-    # batch_size = 10
-    # for i in range((batch - 1) * batch_size, batch * batch_size):
-    for i in range(11, 13):
-        current_file = LP_TEST_IMGS_PATH + str(i) + '.jpg'
+    files = os.listdir(LP_TEST_IMGS_PATH)
+
+    for i in files[:-3]:
+        current_file = LP_TEST_IMGS_PATH + i
         print(f'Loaded {current_file}.')
 
         lpltr = LPLocator(current_file)
         img_lp_highlighted, img_lp_cropped, char_imgs = lpltr.rough_process()
 
-        if char_imgs is None:
+        if len(char_imgs) == 0:
             print(f'Failed to identify the license...')
         else:
             result = identifier.identify_chars(char_imgs)
             print(result)
+
+        # os.system("pause")
 
         # img = CLPDImage(current_file)
         #

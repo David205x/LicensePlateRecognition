@@ -14,7 +14,7 @@ import numpy as np
 from matplotlib.pyplot import plot
 import matplotlib.pylab as pylab
 
-CLASSES_COUNT = 36
+CLASSES_COUNT = 68
 STD_W = 45
 STD_H = 140
 STD_D = 1
@@ -56,7 +56,40 @@ classes = {0: '0',
            32: 'w',
            33: 'x',
            34: 'y',
-           35: 'z'}
+           35: 'z',
+           36: "川",
+           37: "鄂",
+           38: "甘",
+           39: "赣",
+           40: "贵",
+           41: "桂",
+           42: "黑",
+           43: "沪",
+           44: "吉",
+           45: "冀",
+           46: "津",
+           47: "晋",
+           48: "京",
+           49: "辽",
+           50: "鲁",
+           51: "蒙",
+           52: "闽",
+           53: "宁",
+           54: "靑",
+           55: "琼",
+           56: "陕",
+           57: "苏",
+           58: "晋",
+           59: "皖",
+           60: "湘",
+           61: "新",
+           62: "豫",
+           63: "渝",
+           64: "粤",
+           65: "云",
+           66: "藏",
+           67: "浙"
+           }
 
 
 def show_image(img):
@@ -68,8 +101,8 @@ def show_gray_img(img):
     plt.imshow(img, cmap='gray')
     plt.show()
 
-def predict(file, model):
 
+def predict(file, model):
     img = plt.imread(file)
     img_gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
@@ -82,14 +115,13 @@ def predict(file, model):
 
 
 def one_hot(labels):
-    onehot_labels = np.zeros(shape=[len(labels), CLASSES_COUNT])
+    onehot_labels = np.zeros(shape=[len(labels), len(classes)])
     for i in range(len(labels)):
         onehot_labels[i][labels[i]] = 1
     return onehot_labels
 
 
 class LPIdentification(object):
-
     save_path = '../model/LPModel.h5'
 
     def __init__(self, tfrecord_path, train_images, train_labels, test_images, test_labels):
@@ -100,8 +132,8 @@ class LPIdentification(object):
         self.train_images = train_images
         self.train_labels = train_labels
 
-        self.test_images = train_images[2::10]
-        self.test_labels = train_labels[2::10]
+        self.test_images = train_images[2::15]
+        self.test_labels = train_labels[2::15]
 
         # self.test_images = test_images
         # self.test_labels = test_labels
@@ -114,7 +146,7 @@ class LPIdentification(object):
 
         model.add(Conv2D(filters=128, kernel_size=3, padding='valid', activation='relu', input_shape=_input_shape))
         model.add(MaxPool2D(pool_size=2, strides=2, padding="valid"))
-        model.add(Conv2D(filters=32, kernel_size=3, padding='valid', activation='relu'))
+        model.add(Conv2D(filters=68, kernel_size=3, padding='valid', activation='relu'))
         model.add(Flatten())
         model.add(Dense(128, activation='relu'))
         model.add(Dropout(0.15))
@@ -156,8 +188,7 @@ class LPIdentification(object):
 
         if train_new:
             self.train_model(self.train_images, self.train_labels, self.test_images, self.test_labels)
-        else:
-            self.h5_model = tf.keras.models.load_model(LPIdentification.save_path)
+        self.h5_model = tf.keras.models.load_model(LPIdentification.save_path)
 
     def identify_chars(self, char_imgs):
         result = []
@@ -167,7 +198,6 @@ class LPIdentification(object):
 
             result.append(classes.get(pred))
 
-        result.reverse()
         return result
 
     def training_test(self):
@@ -184,5 +214,4 @@ class LPIdentification(object):
         for f in dir_list:
             if predict(TEST_IMG_STORAGE + f, self.h5_model):
                 corr += 1
-        print(f'Accuracy: {int(corr * 100 /tot)}%')
-
+        print(f'Accuracy: {int(corr * 100 / tot)}%')

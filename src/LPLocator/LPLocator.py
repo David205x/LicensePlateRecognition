@@ -16,6 +16,16 @@ def show_gray_img(img):
     plt.show()
 
 
+def crop_rect(img, rect, offset=0):
+    x, y, w, h = int(rect[0] - offset), \
+                 int(rect[1]), \
+                 int(rect[2] - rect[0] + 2 * offset), \
+                 int(rect[3] - rect[1])
+
+    cropped = img[y: y + h, x: x + w].copy()
+    return cropped
+
+
 def preprocess(img_gray, img_HSV, img_B, img_R):
     img_h, img_w = img_HSV.shape[0:2]
 
@@ -35,13 +45,12 @@ def preprocess(img_gray, img_HSV, img_B, img_R):
     img_close = cv2.GaussianBlur(img_close, (5, 5), 0)
     _, img_bin = cv2.threshold(img_close, 115, 255, cv2.THRESH_BINARY)
 
-    show_gray_img(img_bin)
+    # show_gray_img(img_bin)
 
     return img_bin
 
 
 def find_lp(img_bin):
-
     contours, _ = cv2.findContours(img_bin, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     if len(contours) == 0:
         return None
@@ -73,7 +82,6 @@ def find_lp(img_bin):
 
 
 def locate_rect(points, offset=0):
-
     rect = cv2.minAreaRect(points)
     ang = rect[-1]
     box = np.int0(cv2.boxPoints(rect))
@@ -97,9 +105,9 @@ def locate_rect(points, offset=0):
 
     v = []
     if ang >= 45:
-        v = np.array([[lx, ly], [tx, ty], [rx, ry], [bx, by]])
+        v = np.array([(lx, ly), (tx, ty), (rx, ry), (bx, by)])
     else:
-        v = np.array([[tx, ty], [rx, ry], [bx, by], [lx, ly]])
+        v = np.array([(tx, ty), (rx, ry), (bx, by), (lx, ly)])
 
     r = [v[0][0] - offset, v[0][1] - offset, v[2][0] + offset, v[2][1] + offset]
 
@@ -112,7 +120,6 @@ def locate_rect(points, offset=0):
 
 
 def extract_lp(img, rect, offset=0):
-
     mh, mw = img.shape[0:2]
 
     x, y, w, h = int(rect[0] - offset) if rect[0] > offset else 0, \
@@ -124,14 +131,16 @@ def extract_lp(img, rect, offset=0):
 
 
 def perspective_warp(img, vertices):
-
     dw = LP_WIDTH
     dh = LP_HEIGHT
 
     src = vertices
     dst = [(0, 0), (dw, 0), (dw, dh), (0, dh)]
 
-    warp_src, warp_dst = np.array(src, dtype=np.float32), np.array(dst, dtype=np.float32)
+    # print(f'{vertices} -> {dst}')
+
+    warp_src, warp_dst = np.float32(src), np.float32(dst)
+    # np.array(src, dtype=np.float32), np.array(dst, dtype=np.float32)
 
     mat = cv2.getPerspectiveTransform(warp_src, warp_dst)
 
@@ -150,6 +159,209 @@ def draw_rect(img, r, v, stroke_width, offset=0):
     return
 
 
+def cast_shadows(lp_img):
+    img_gray = cv2.cvtColor(lp_img, cv2.COLOR_RGB2GRAY)
+    _, result = cv2.threshold(img_gray, 0x88, 0xff, cv2.THRESH_BINARY)
+
+    height, width = result.shape
+    dot = [0 for _ in range(width)]
+
+    for j in range(width):
+        for i in range(height):
+            if result[i, j] == 0:
+                dot[j] += 1
+                result[i, j] = 0xff
+
+    for j in range(width):
+        for i in range((height - dot[j]), height):
+            result[i, j] = 0
+
+    dot_flipped = [height - dot[i] for i in range(width)]
+    return result, dot_flipped
+
+
+def analyze_shadows(image_shd, dots):
+    height, width = image_shd.shape[0:2]
+    blocks_pos = []
+
+    sum_shd = 0
+
+    for w in range(width):
+        sum_shd += dots[w]
+    reference_height = (int(sum_shd / width) >> 3) + 2
+    # print(f'sampling at h={reference_height}')
+
+    block_type = [0, 0xff]
+
+    first_block_type = cur_type = image_shd[reference_height, 0]
+    blocks_pos.append(0)
+    for w in range(width):
+        if not image_shd[reference_height, w] == cur_type:
+            blocks_pos.append(w)
+            cur_type = block_type[((cur_type + 1) % 2)]
+    blocks_pos.append(width)
+    last_block_type = cur_type
+
+    dist = []
+    for i in range(0, len(blocks_pos) - 1):
+        dist.append(blocks_pos[i + 1] - blocks_pos[i])
+    rev_dist = dist
+    rev_dist.reverse()
+
+    min_char_width = int(width / 25)
+    noise_width = int(width / 100)
+    approx_char_max = width
+    approx_char_min = int(width / 14)
+    wake_fixer = 0.6 * STD_CHAR_WIDTH
+    fixer_const = 0.33 * STD_CHAR_WIDTH
+    gaps = []
+    chars = []
+    char_counter = 0
+
+    right_start = 0
+    fixer_called = False
+
+    if len(rev_dist) < 4:
+        return None, None, None
+
+    # print(rev_dist)
+
+    if last_block_type == block_type[0]:  # last block is black
+        # print(f'Applying case 0x00')
+        if rev_dist[0] > wake_fixer and rev_dist[2] > wake_fixer:
+            right_start -= fixer_const
+        skipped = False
+        for d in rev_dist:
+            if not skipped:  # skip the first block
+                skipped = True
+                right_start += d
+                continue
+            if approx_char_max > d > min_char_width:
+                chars.append(d)
+                char_counter += 1
+            elif d > approx_char_max:
+                continue
+            else:
+                gaps.append(d)
+            if char_counter == 5:
+                break
+    else:  # last block is white
+        # print(f'Applying case 0xff')
+        if rev_dist[1] > wake_fixer and rev_dist[3] > wake_fixer:
+            right_start -= fixer_const
+        processing_first = True
+        for d in rev_dist:
+            if processing_first:  # check whether the last block has a suitable width for a character
+                if noise_width < d < approx_char_min:
+                    right_start += d
+                else:
+                    processing_first = False
+                continue
+            if approx_char_max > d > min_char_width:
+                chars.append(d)
+                char_counter += 1
+            elif d > approx_char_max:
+                continue
+            else:
+                gaps.append(d)
+            if char_counter == 5:
+                break
+
+    # print(f'{chars} | {gaps}')
+
+    char_avg = 0
+
+    if len(chars) == 0:
+        return None, None, None
+
+    for c in chars:
+        char_avg += c
+    char_avg /= len(chars)
+
+    char_avg = (char_avg + 135) / 4
+    gap_avg = char_avg * GAP_CHAR_RATIO_CONST
+
+    # print(f'{right_start}, ({char_avg}\t{gap_avg}) ratio: {char_avg / gap_avg}')
+
+    return int(right_start), round(char_avg) + EXTRA_CHAR_WIDTH, math.ceil(gap_avg)
+
+
+def crop_chars(lp_img, right_start, char_width, gap_width, std=False):
+    height, width = lp_img.shape[0:2]
+
+    lp_gray_img = cv2.cvtColor(lp_img, cv2.COLOR_RGB2GRAY)
+
+    bigger_gap_width = int(char_width * BIGGER_GAP_CHAR_RATIO_CONST)
+
+    anchors = []
+    width_preset = [
+        right_start,
+        char_width, gap_width,
+        char_width, gap_width,
+        char_width, gap_width,
+        char_width, gap_width,
+        char_width, bigger_gap_width,
+        char_width, gap_width,
+        char_width
+    ]
+
+    std_width_preset = [
+        12,
+        45, 12,
+        45, 12,
+        45, 12,
+        45, 12,
+        45, 34,
+        45, 12,
+        45
+    ]
+
+    picked_preset = []
+    if std:
+        print(f'Slicing with standard preset...')
+        picked_preset = std_width_preset
+    else:
+        print(f'Slicing with customized preset...')
+        picked_preset = width_preset
+
+    cur = width
+    for w in picked_preset:
+        anchors.append(cur - w)
+        cur -= w
+
+    sliced_imgs = []
+
+    visible = 1
+    for i in range(len(anchors) - 1):
+        if visible == 1:
+            rect = [anchors[i + 1], 0, anchors[i], height - 0]
+            offset = 6
+            # draw_rect(self.lp_img, rect, offset)
+            tmp = crop_rect(lp_gray_img, rect, offset)
+            try:
+                tmp = cv2.resize(tmp, (45, 140))
+            except Exception as e:
+                continue
+            # show_gray_img(tmp)
+            sliced_imgs.append(tmp)
+        visible = (visible + 1) % 2
+
+    # show_image(self.lp_img)
+
+    return sliced_imgs
+
+
+LP_WIDTH = 440
+LP_HEIGHT = 140
+
+STD_CHAR_WIDTH = 45
+
+# 0.267 0.756 0
+GAP_CHAR_RATIO_CONST = 0.3
+BIGGER_GAP_CHAR_RATIO_CONST = 0.7
+EXTRA_CHAR_WIDTH = 2
+
+
 class LPLocator(object):
 
     def __init__(self, path):
@@ -161,6 +373,8 @@ class LPLocator(object):
 
         self.w = None
         self.h = None
+
+        self.std_flag = False
 
         try:
             self.img = plt.imread(self.image_path)
@@ -193,14 +407,22 @@ class LPLocator(object):
 
         return img_gray, img_HSV, img_B, img_R
 
-    def process(self):
+    def rough_process(self):
 
         rect = []
         vertices = []
+        dots = []
+        slices = []
 
         if self.w == 440 and self.h == 140:
             rect = [0, 0, 440, 140]
-            vertices = rect
+            vertices = [
+                (rect[0], rect[1]),
+                (rect[2], rect[1]),
+                (rect[2], rect[3]),
+                (rect[0], rect[3])
+            ]
+            self.std_flag = True
 
         else:
             img_gray, img_HSV, img_B, img_R = self.preprocess()
@@ -212,12 +434,13 @@ class LPLocator(object):
 
             vertices, rect = locate_rect(pts, 0)
 
-        # self.lp_img = perspective_warp(self.img, vertices)
-        # show_image(self.lp_img)
+        self.lp_img = perspective_warp(self.img, vertices)
+        show_image(self.lp_img)
+        lp_shadow_img, dots = cast_shadows(self.lp_img)
+        right_start, char_w, gap_w = analyze_shadows(lp_shadow_img, dots)
 
-        draw_rect(self.img, rect, vertices, 3)
-        show_image(self.img)
-
-
-LP_WIDTH = 400
-LP_HEIGHT = 140
+        if char_w is not None and gap_w is not None:
+            slices = crop_chars(self.lp_img, right_start, char_w, gap_w, self.std_flag)
+            return self.img, self.lp_img, slices
+        else:
+            return self.img, self.lp_img, None

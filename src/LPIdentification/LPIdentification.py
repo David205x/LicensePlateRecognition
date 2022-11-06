@@ -122,11 +122,14 @@ def one_hot(labels):
 
 
 class LPIdentification(object):
-    save_path = '../model/LPModel.h5'
 
     def __init__(self, tfrecord_path, train_images, train_labels, test_images, test_labels):
 
         self.record_path = tfrecord_path
+        self.model_type = tfrecord_path.split('.')[-2][-2:]
+        self.model_file_name = self.model_type + '_model.h5'
+        self.save_path = '../model/' + self.model_file_name
+
         self.model = None
         self.h5_model = None
         self.train_images = train_images
@@ -140,16 +143,17 @@ class LPIdentification(object):
 
         # print(f'{train_images.shape} : {train_labels.shape} | {self.test_images.shape} : {self.test_labels.shape} ')
 
-    def mnist_cnn(self, _input_shape):
+    def build_model(self, _input_shape):
 
         model = keras.Sequential()
 
         model.add(Conv2D(filters=128, kernel_size=3, padding='valid', activation='relu', input_shape=_input_shape))
-        model.add(MaxPool2D(pool_size=2, strides=2, padding="valid"))
+        model.add(MaxPool2D(pool_size=4, strides=4, padding="valid"))
         model.add(Conv2D(filters=68, kernel_size=3, padding='valid', activation='relu'))
+        model.add(MaxPool2D(pool_size=2, strides=2, padding="valid"))
         model.add(Flatten())
         model.add(Dense(128, activation='relu'))
-        model.add(Dropout(0.15))
+        model.add(Dropout(0.2))
         model.add(Dense(CLASSES_COUNT, activation='softmax'))
 
         print(model.summary())
@@ -163,9 +167,9 @@ class LPIdentification(object):
         _train_labels = one_hot(_train_labels)
         _test_labels = one_hot(_test_labels)
 
-        self.mnist_cnn(_input_shape=(STD_H, STD_W, STD_D))
+        self.build_model(_input_shape=(STD_H, STD_W, STD_D))
         self.model.compile(optimizer=tf.optimizers.Adam(), loss="categorical_crossentropy", metrics=['accuracy'])
-        self.model.fit(x=_train_images, y=_train_labels, epochs=20)
+        self.model.fit(x=_train_images, y=_train_labels, epochs=30)
 
         loss, acc = self.model.evaluate(x=_test_images, y=_test_labels)
         metrics = [tf.keras.metrics.sparse_categorical_accuracy]
@@ -181,14 +185,14 @@ class LPIdentification(object):
                 corr += 1
         print(f'correct count: {corr}\ncorrect pct: {corr / len(_test_images)}')
 
-        self.model.save(LPIdentification.save_path, overwrite=True)
-        print(f'Model saved at {LPIdentification.save_path}')
+        self.model.save(self.save_path, overwrite=True)
+        print(f'Model saved at {self.save_path}')
 
     def load_h5_model(self, train_new):
 
         if train_new:
             self.train_model(self.train_images, self.train_labels, self.test_images, self.test_labels)
-        self.h5_model = tf.keras.models.load_model(LPIdentification.save_path)
+        self.h5_model = tf.keras.models.load_model(self.save_path)
 
     def identify_chars(self, char_imgs):
         result = []
@@ -196,7 +200,8 @@ class LPIdentification(object):
             target = tf.reshape(image_utils.img_to_array(cimg), (1, STD_H, STD_W))
             pred = np.argmax(self.h5_model.predict(target))
 
-            result.append(classes.get(pred))
+            mapped_result = classes.get(pred if self.model_type == 'en' else pred + 36)
+            result.append(mapped_result)
 
         return result
 

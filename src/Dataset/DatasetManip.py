@@ -7,81 +7,87 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 
-SLICES_ROOT = '../dataset_v2/'
-TFR_PATH = '../model/license_plate_test.tfrecords'
+EN_ROOT = '../dataset_v2/en/'
+ZH_ROOT = '../dataset_v2/zh/'
+EN_TFR_PATH = '../model/license_plate_en.tfrecords'
+ZH_TFR_PATH = '../model/license_plate_zh.tfrecords'
 
 STD_W = 45
 STD_H = 140
 STD_D = 1
 
-classes = {'0': 0,
-           '1': 1,
-           '2': 2,
-           '3': 3,
-           '4': 4,
-           '5': 5,
-           '6': 6,
-           '7': 7,
-           '8': 8,
-           '9': 9,
-           'a': 10,
-           'b': 11,
-           'c': 12,
-           'd': 13,
-           'e': 14,
-           'f': 15,
-           'g': 16,
-           'h': 17,
-           'i': 18,
-           'j': 19,
-           'k': 20,
-           'l': 21,
-           'm': 22,
-           'n': 23,
-           'o': 24,
-           'p': 25,
-           'q': 26,
-           'r': 27,
-           's': 28,
-           't': 29,
-           'u': 30,
-           'v': 31,
-           'w': 32,
-           'x': 33,
-           'y': 34,
-           'z': 35,
-           "zh_chuan": 36,
-           "zh_e": 37,
-           "zh_gan1": 38,
-           "zh_gan4": 39,
-           "zh_guiz": 40,
-           "zh_guil": 41,
-           "zh_hei": 42,
-           "zh_hu": 43,
-           "zh_ji2": 44,
-           "zh_ji4": 45,
-           "zh_jin1": 46,
-           "zh_jin4": 47,
-           "zh_jing": 48,
-           "zh_liao": 49,
-           "zh_lu": 50,
-           "zh_meng": 51,
-           "zh_min": 52,
-           "zh_ning": 53,
-           "zh_qing": 54,
-           "zh_qiong": 55,
-           "zh_shan": 56,
-           "zh_su": 57,
-           "zh_wan": 59,
-           "zh_xiang": 60,
-           "zh_xin": 61,
-           "zh_yu2": 62,
-           "zh_yu4": 63,
-           "zh_yue": 64,
-           "zh_yun": 65,
-           "zh_zang": 66,
-           "zh_zhe": 67
-           }
+en_classes = {
+    '0': 0,
+    '1': 1,
+    '2': 2,
+    '3': 3,
+    '4': 4,
+    '5': 5,
+    '6': 6,
+    '7': 7,
+    '8': 8,
+    '9': 9,
+    'a': 10,
+    'b': 11,
+    'c': 12,
+    'd': 13,
+    'e': 14,
+    'f': 15,
+    'g': 16,
+    'h': 17,
+    'i': 18,
+    'j': 19,
+    'k': 20,
+    'l': 21,
+    'm': 22,
+    'n': 23,
+    'o': 24,
+    'p': 25,
+    'q': 26,
+    'r': 27,
+    's': 28,
+    't': 29,
+    'u': 30,
+    'v': 31,
+    'w': 32,
+    'x': 33,
+    'y': 34,
+    'z': 35
+}
+
+zh_classes = {
+    "zh_chuan": 0,
+    "zh_e": 1,
+    "zh_gan1": 2,
+    "zh_gan4": 3,
+    "zh_guiz": 4,
+    "zh_guil": 5,
+    "zh_hei": 6,
+    "zh_hu": 7,
+    "zh_ji2": 8,
+    "zh_ji4": 9,
+    "zh_jin1": 10,
+    "zh_jin4": 11,
+    "zh_jing": 12,
+    "zh_liao": 13,
+    "zh_lu": 14,
+    "zh_meng": 15,
+    "zh_min": 16,
+    "zh_ning": 17,
+    "zh_qing": 18,
+    "zh_qiong": 19,
+    "zh_shan": 20,
+    "zh_su": 21,
+    "zh_wan": 22,
+    "zh_xiang": 23,
+    "zh_xin": 24,
+    "zh_yu2": 25,
+    "zh_yu4": 26,
+    "zh_yue": 27,
+    "zh_yun": 28,
+    "zh_zang": 29,
+    "zh_zhe": 30
+}
 
 
 def _int64_feature(value):
@@ -96,15 +102,28 @@ def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
 
 
-def generate_dataset(tfr_path):
+def generate_dataset(type):
+
+    picked_class = None
+    picked_root = None
+    tfr_path = None
+    if type == 'en':
+        picked_class = en_classes
+        picked_root = EN_ROOT
+        tfr_path = EN_TFR_PATH
+    else:
+        picked_class = zh_classes
+        picked_root = ZH_ROOT
+        tfr_path = ZH_TFR_PATH
+
     writer = tf.io.TFRecordWriter(tfr_path)
 
     label_key = 0
-    for label, name in enumerate(classes):
+    for label, name in enumerate(picked_class):
 
         # print(f'label: {label} name: {name}')
 
-        path = SLICES_ROOT + str(name) + '/'
+        path = picked_root + str(name) + '/'
 
         for img_name in os.listdir(path):
             img_path = path + img_name
@@ -125,7 +144,7 @@ def generate_dataset(tfr_path):
             writer.write(exmp.SerializeToString())
         label_key += 1
     writer.close()
-
+    return tfr_path
 
 img_features = {
     'height': tf.io.FixedLenFeature([], tf.int64),

@@ -8,7 +8,6 @@ from Dataset.DatasetManip import generate_dataset, parse_dataset
 from LPIdentification.LPIdentification import LPIdentification
 
 BASE_DATASET_PATH = '../CLPD_1200/'
-TFR_PATH = '../model/license_plate_test.tfrecords'
 LP_TEST_IMGS_PATH = '../lp/'
 
 if __name__ == "__main__":
@@ -22,14 +21,20 @@ if __name__ == "__main__":
     # csv_data = cr.get_csv_data()
     # print(f'CSV data loaded.')
 
-    generate_dataset(TFR_PATH)
-    train_images, train_labels, test_images, test_labels = parse_dataset(TFR_PATH)
+    en_trf_path = generate_dataset('en')
+    zh_trf_path = generate_dataset('zh')
+
+    en_train_images, en_train_labels, en_test_images, en_test_labels = parse_dataset(en_trf_path)
+    zh_train_images, zh_train_labels, zh_test_images, zh_test_labels = parse_dataset(zh_trf_path)
     print(f'TFRecords loaded.')
-    identifier = LPIdentification(TFR_PATH, train_images, train_labels, test_images, test_labels)
+
+    en_identifier = LPIdentification(en_trf_path, en_train_images, en_train_labels, en_test_images, en_test_labels)
+    zh_identifier = LPIdentification(zh_trf_path, zh_train_images, zh_train_labels, zh_test_images, zh_test_labels)
     print(f'Model training ready.')
 
-    identifier.load_h5_model(False)
-
+    train_new = False
+    en_identifier.load_h5_model(train_new)
+    zh_identifier.load_h5_model(train_new)
     print(f'Successfully loaded .h5 model.')
 
     files = os.listdir(LP_TEST_IMGS_PATH)
@@ -44,7 +49,8 @@ if __name__ == "__main__":
         if len(char_imgs) == 0:
             print(f'Failed to identify the license...')
         else:
-            result = identifier.identify_chars(char_imgs)
+            result = zh_identifier.identify_chars([char_imgs[0]])
+            result.append(en_identifier.identify_chars(char_imgs[1:]))
             print(result)
 
         # os.system("pause")

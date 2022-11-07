@@ -103,10 +103,6 @@ def _bytes_feature(value):
 
 
 def generate_dataset(type):
-
-    picked_class = None
-    picked_root = None
-    tfr_path = None
     if type == 'en':
         picked_class = en_classes
         picked_root = EN_ROOT
@@ -134,9 +130,9 @@ def generate_dataset(type):
             img = original_img.convert('L').tobytes()
 
             features = {
-                'height': _int64_feature(shape[0]),
-                'width': _int64_feature(shape[1]),
-                'depth': _int64_feature(shape[2]),
+                # 'height': _int64_feature(shape[0]),
+                # 'width': _int64_feature(shape[1]),
+                # 'depth': _int64_feature(shape[2]),
                 'label': _int64_feature(label_key),
                 'image_raw': _bytes_feature(img),
             }
@@ -146,10 +142,11 @@ def generate_dataset(type):
     writer.close()
     return tfr_path
 
+
 img_features = {
-    'height': tf.io.FixedLenFeature([], tf.int64),
-    'width': tf.io.FixedLenFeature([], tf.int64),
-    'depth': tf.io.FixedLenFeature([], tf.int64),
+    # 'height': tf.io.FixedLenFeature([], tf.int64),
+    # 'width': tf.io.FixedLenFeature([], tf.int64),
+    # 'depth': tf.io.FixedLenFeature([], tf.int64),
     'label': tf.io.FixedLenFeature([], tf.int64),
     'image_raw': tf.io.FixedLenFeature([], tf.string)
 }
@@ -174,7 +171,8 @@ def parse_dataset(tfr_name):
         image_raw = data['image_raw'].numpy()
 
         restored_img = tf.io.decode_raw(image_raw, tf.uint8)
-        restored_img = tf.reshape(restored_img, (data["height"], data["width"]))
+        # restored_img = tf.reshape(restored_img, (data["height"], data["width"]))
+        restored_img = tf.reshape(restored_img, (STD_H, STD_W))
 
         imgs.append(restored_img)
         labels.append(data['label'])

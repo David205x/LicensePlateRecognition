@@ -7,12 +7,30 @@ from CSVReader.CSVReader import CSVReader
 from Dataset.DatasetManip import generate_dataset, parse_dataset
 from LPIdentification.LPIdentification import LPIdentification
 
+import matplotlib.pyplot as plt
+
 BASE_DATASET_PATH = '../CLPD_1200/'
 LP_TEST_IMGS_PATH = '../lp/'
+
+
+def result_coversion(result_arr):
+    result_str = result_arr[0]
+    for r in result_arr[1]:
+        result_str += str(r)
+    ret_str = ''
+    ret_str += result_str[:2]
+    ret_str += '·'
+    ret_str += result_str[2:]
+
+    return ret_str
+
 
 if __name__ == "__main__":
 
     print("|--License Plate Recognition--|")
+
+    plt.rcParams['font.sans-serif'] = ['SimHei']
+    plt.rcParams['axes.unicode_minus'] = False
 
     # desired_csv_size = 100
     # cr = CSVReader(desired_csv_size)
@@ -35,7 +53,10 @@ if __name__ == "__main__":
     train_new = False
     en_identifier.load_h5_model(train_new)
     zh_identifier.load_h5_model(train_new)
-    print(f'Successfully loaded .h5 model.')
+    if train_new:
+        print(f'Successfully trained new .h5 model.')
+    else:
+        print(f'Successfully loaded existing .h5 model.')
 
     files = os.listdir(LP_TEST_IMGS_PATH)
 
@@ -51,7 +72,10 @@ if __name__ == "__main__":
         else:
             result = zh_identifier.identify_chars([char_imgs[0]])
             result.append(en_identifier.identify_chars(char_imgs[1:]))
-            print(result)
+
+            plt.imshow(img_lp_highlighted)
+            plt.title(result_coversion(result))
+            plt.show()
 
         # os.system("pause")
 

@@ -485,7 +485,7 @@ class LPLocator(object):
 
         self.lp_img = perspective_warp(self.img, vertices)
         draw_rect(self.img, rect, vertices, 4)
-        show_image(self.img)
+        # show_image(self.img)
         lp_shadow_img, dots = cast_shadows(self.lp_img)
         right_start, char_w, gap_w = analyze_shadows(lp_shadow_img, dots)
 

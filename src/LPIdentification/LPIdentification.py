@@ -31,32 +31,32 @@ classes = {0: '0',
            7: '7',
            8: '8',
            9: '9',
-           10: 'a',
-           11: 'b',
-           12: 'c',
-           13: 'd',
-           14: 'e',
-           15: 'f',
-           16: 'g',
-           17: 'h',
-           18: 'i',
-           19: 'j',
-           20: 'k',
-           21: 'l',
-           22: 'm',
-           23: 'n',
-           24: 'o',
-           25: 'p',
-           26: 'q',
-           27: 'r',
-           28: 's',
-           29: 't',
-           30: 'u',
-           31: 'v',
-           32: 'w',
-           33: 'x',
-           34: 'y',
-           35: 'z',
+           10: 'A',
+           11: 'B',
+           12: 'C',
+           13: 'D',
+           14: 'E',
+           15: 'F',
+           16: 'G',
+           17: 'H',
+           18: 'I',
+           19: 'J',
+           20: 'K',
+           21: 'L',
+           22: 'M',
+           23: 'N',
+           24: 'O',
+           25: 'P',
+           26: 'Q',
+           27: 'R',
+           28: 'S',
+           29: 'T',
+           30: 'U',
+           31: 'V',
+           32: 'W',
+           33: 'X',
+           34: 'Y',
+           35: 'Z',
            36: "川",
            37: "鄂",
            38: "甘",
@@ -153,7 +153,7 @@ class LPIdentification(object):
         model.add(MaxPool2D(pool_size=2, strides=2, padding="valid"))
         model.add(Flatten())
         model.add(Dense(128, activation='relu'))
-        model.add(Dropout(0.2))
+        model.add(Dropout(0.25))
         model.add(Dense(CLASSES_COUNT, activation='softmax'))
 
         print(model.summary())
@@ -169,7 +169,13 @@ class LPIdentification(object):
 
         self.build_model(_input_shape=(STD_H, STD_W, STD_D))
         self.model.compile(optimizer=tf.optimizers.Adam(), loss="categorical_crossentropy", metrics=['accuracy'])
-        self.model.fit(x=_train_images, y=_train_labels, epochs=30)
+
+        if self.model_type == 'zh':
+            epoch = 50
+        else:
+            epoch = 40
+
+        self.model.fit(x=_train_images, y=_train_labels, epochs=epoch)
 
         loss, acc = self.model.evaluate(x=_test_images, y=_test_labels)
         metrics = [tf.keras.metrics.sparse_categorical_accuracy]

@@ -11,8 +11,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 
 class lsrGUI(object):
 
-    app = QApplication(sys.argv)
-
     def __init__(self):
 
         pass

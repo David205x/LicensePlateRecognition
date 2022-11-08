@@ -87,16 +87,16 @@ def locate_rect(points, offset=0):
     box = np.int0(cv2.boxPoints(rect))
 
     lx = np.min(box[:, 0])
-    ly = box[:, 1][np.where(box[:, 0] == lx)][0]
+    ly = np.min(box[:, 1][np.where(box[:, 0] == lx)])
 
     rx = np.max(box[:, 0])
-    ry = box[:, 1][np.where(box[:, 0] == rx)][0]
+    ry = np.max(box[:, 1][np.where(box[:, 0] == rx)])
 
     ty = np.min(box[:, 1])
-    tx = box[:, 0][np.where(box[:, 1] == ty)][0]
+    tx = np.min(box[:, 0][np.where(box[:, 1] == ty)])
 
     by = np.max(box[:, 1])
-    bx = box[:, 0][np.where(box[:, 1] == by)][0]
+    bx = np.max(box[:, 0][np.where(box[:, 1] == by)])
 
     # print(box)
     # print(f'\t\t({tx}, {ty})')

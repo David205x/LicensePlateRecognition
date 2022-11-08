@@ -135,13 +135,13 @@ class LPIdentification(object):
         self.train_images = train_images
         self.train_labels = train_labels
 
-        self.test_images = train_images[2::15]
-        self.test_labels = train_labels[2::15]
+        # self.test_images = train_images[2::15]
+        # self.test_labels = train_labels[2::15]
 
-        # self.test_images = test_images
-        # self.test_labels = test_labels
+        self.test_images = test_images
+        self.test_labels = test_labels
 
-        # print(f'{train_images.shape} : {train_labels.shape} | {self.test_images.shape} : {self.test_labels.shape} ')
+        print(f'{train_images.shape} : {train_labels.shape} | {self.test_images.shape} : {self.test_labels.shape} ')
 
     def build_model(self, _input_shape):
 

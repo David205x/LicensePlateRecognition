@@ -1,4 +1,5 @@
 import os
+import math
 
 import PyQt5
 
@@ -42,6 +43,7 @@ if __name__ == "__main__":
 
     en_trf_path = generate_records('en')
     zh_trf_path = generate_records('zh')
+    print(f'TFRecords generated.')
 
     en_train_images, en_train_labels, en_test_images, en_test_labels = parse_dataset(en_trf_path)
     zh_train_images, zh_train_labels, zh_test_images, zh_test_labels = parse_dataset(zh_trf_path)
@@ -49,7 +51,7 @@ if __name__ == "__main__":
 
     en_identifier = LPIdentification(en_trf_path, en_train_images, en_train_labels, en_test_images, en_test_labels)
     zh_identifier = LPIdentification(zh_trf_path, zh_train_images, zh_train_labels, zh_test_images, zh_test_labels)
-    print(f'Model training ready.')
+    print(f'Identifier ready.')
 
     train_new = False
     en_identifier.load_h5_model(train_new)
@@ -60,30 +62,42 @@ if __name__ == "__main__":
         print(f'Successfully loaded existing .h5 model.')
 
     files = os.listdir(LP_TEST_IMGS_PATH)
+    file_cnt = len(files)
+    counter = 1
+    cols = 8
+    rows = math.floor(file_cnt / cols)
+    size = (rows, cols)
+
+    fig = plt.figure(figsize=(25.6, 14.4), dpi=100)
 
     for i in files[:-3]:
         current_file = LP_TEST_IMGS_PATH + i
-        print(f'Loaded {current_file}.')
+        print(f'Loaded {current_file.split("/")[-1]}.')
 
         lpltr = LPLocator(current_file)
         img_lp_highlighted, img_lp_cropped, char_imgs = lpltr.rough_process()
 
         if len(char_imgs) == 0:
-            print(f'Failed to identify the license...')
+            plt.subplot(size[0], size[1], counter)
+            plt.title('Failed')
+            plt.imshow(img_lp_highlighted)
+            print(f'Failed to identify the license plate...')
         else:
             result = zh_identifier.identify_chars([char_imgs[0]])
             result.append(en_identifier.identify_chars(char_imgs[1:]))
 
-            plt.imshow(img_lp_highlighted)
+            plt.subplot(size[0], size[1], counter)
             plt.title(result_coversion(result))
-            plt.show()
+            plt.imshow(img_lp_highlighted)
+        counter += 1
 
-        # os.system("pause")
+    plt.show()
 
-        # img = CLPDImage(current_file)
-        #
-        # img.get_csv_data(csv_data[img.get_id()])
-        #
-        # img.preprocess()
-        # # img.write_all()
+    # os.system("pause")
 
+    # img = CLPDImage(current_file)
+    #
+    # img.get_csv_data(csv_data[img.get_id()])
+    #
+    # img.preprocess()
+    # # img.write_all()

@@ -2,9 +2,10 @@ import os
 
 import PyQt5
 
+from src.GUI import lsrGUI
 from src.LPLocator.LPLocator import LPLocator
 from CSVReader.CSVReader import CSVReader
-from Dataset.DatasetManip import generate_dataset, parse_dataset
+from Dataset.DatasetManip import generate_records, parse_dataset
 from LPIdentification.LPIdentification import LPIdentification
 
 import matplotlib.pyplot as plt
@@ -34,13 +35,13 @@ if __name__ == "__main__":
 
     # desired_csv_size = 100
     # cr = CSVReader(desired_csv_size)
-    #
+
     # col_titles = cr.get_csv_title()
     # csv_data = cr.get_csv_data()
     # print(f'CSV data loaded.')
 
-    en_trf_path = generate_dataset('en')
-    zh_trf_path = generate_dataset('zh')
+    en_trf_path = generate_records('en')
+    zh_trf_path = generate_records('zh')
 
     en_train_images, en_train_labels, en_test_images, en_test_labels = parse_dataset(en_trf_path)
     zh_train_images, zh_train_labels, zh_test_images, zh_test_labels = parse_dataset(zh_trf_path)

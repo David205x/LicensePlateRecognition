@@ -102,8 +102,8 @@ def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
 
 
-def generate_dataset(type):
-    if type == 'en':
+def generate_records(mtype):
+    if mtype == 'en':
         picked_class = en_classes
         picked_root = EN_ROOT
         tfr_path = EN_TFR_PATH

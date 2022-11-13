@@ -1,5 +1,6 @@
 import os
 import math
+import sys
 
 import cv2
 
@@ -61,18 +62,11 @@ def Main(photo_path):
         print(f'Successfully loaded existing .h5 model.')
 
 
-    files = os.listdir(LP_TEST_IMGS_PATH)
-    file_cnt = len(files)
-    counter = 1
-    cols = 8
-    rows = math.floor(file_cnt / cols)
-    size = (rows, cols)
+    # files = os.listdir(LP_TEST_IMGS_PATH)
 
-    fig = plt.figure(figsize=(25.6, 14.4), dpi=100)
 
-    for i in files[:-3]:
-        current_file = LP_TEST_IMGS_PATH + i
-        print(f'Loaded {current_file.split("/")[-1]}.')
+    current_file = photo_path
+    print(f'Loaded {current_file}.')
 
 
     lpltr = LPLocator(current_file)
@@ -82,6 +76,7 @@ def Main(photo_path):
 
     if len(char_imgs) == 0:
         print(f'Failed to identify the license...')
+        # sys.exit()
     else:
         result = zh_identifier.identify_chars([char_imgs[0]])
         result.append(en_identifier.identify_chars(char_imgs[1:]))

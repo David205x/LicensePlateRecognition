@@ -355,6 +355,7 @@ def crop_chars(lp_img, right_start, char_width, gap_width, std=False):
             rect = [r_anchors[i + 1], 0, r_anchors[i], height - 0]
             offset = 6
             # draw_rect(self.lp_img, rect, offset)
+            draw_rect(lp_img, rect, 4, 4)
             tmp = crop_rect(lp_gray_img, rect, offset)
             r_success_count += 1
             if r_success_count == 6:
@@ -373,20 +374,22 @@ def crop_chars(lp_img, right_start, char_width, gap_width, std=False):
         if l_visible == 1:
             rect = [l_anchors[i], 0, l_anchors[i + 1], height - 0]
             offset = 6
-            # draw_rect(self.lp_img, rect, offset)
+            # draw_rect(lp_img, rect, offset)
+            draw_rect(lp_img, rect, 4, 4)
             tmp = crop_rect(lp_gray_img, rect, offset)
             l_success_count += 1
+            # show_gray_img(tmp)  # 车牌前2字
             if l_success_count == 3:
                 break
             try:
                 tmp = cv2.resize(tmp, (45, 140))
             except Exception as e:
                 continue
-            # show_gray_img(tmp)
+            #
             sliced_chars.append(tmp)
         l_visible = (l_visible + 1) % 2
-
-    # show_image(self.lp_img)
+    # show_gray_img(lp_img)
+    # show_image(lp_img)  #定位
 
     sliced_imgs = []
 
@@ -397,7 +400,7 @@ def crop_chars(lp_img, right_start, char_width, gap_width, std=False):
     for sd in sliced_digits:
         sliced_imgs.append(sd)
 
-    return sliced_imgs
+    return sliced_imgs, lp_img
 
 
 LP_WIDTH = 440
@@ -419,7 +422,8 @@ class LPLocator(object):
 
         self.img = None
         self.lp_img = None
-
+        self.sliced_photos = None
+        self.shadow_image = None
         self.w = None
         self.h = None
 
@@ -433,6 +437,9 @@ class LPLocator(object):
             print(e)
         finally:
             return
+
+    def return_image(self):
+        return self.img, self.shadow_image, self.sliced_photos
 
     def show_self(self, color_map):
         plt.imshow(self.img, cmap=color_map)
@@ -485,12 +492,16 @@ class LPLocator(object):
 
         self.lp_img = perspective_warp(self.img, vertices)
         draw_rect(self.img, rect, vertices, 4)
-        # show_image(self.img)
-        lp_shadow_img, dots = cast_shadows(self.lp_img)
-        right_start, char_w, gap_w = analyze_shadows(lp_shadow_img, dots)
+        #
 
+        lp_shadow_img, dots = cast_shadows(self.lp_img)
+
+        right_start, char_w, gap_w = analyze_shadows(lp_shadow_img, dots)
+        self.shadow_image = lp_shadow_img
+        # show_image(lp_shadow_img) #垂直投影
         if char_w is not None and gap_w is not None:
-            slices = crop_chars(self.lp_img, right_start, char_w, gap_w, self.std_flag)
+            slices, lp_img = crop_chars(self.lp_img, right_start, char_w, gap_w, self.std_flag)
+            self.sliced_photos = lp_img
             return self.img, self.lp_img, slices
         else:
             return self.img, self.lp_img, []

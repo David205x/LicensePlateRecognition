@@ -1,14 +1,13 @@
 import os
 import math
 
-import PyQt5
+import cv2
 
-from src.GUI import lsrGUI
-from src.LPLocator.LPLocator import LPLocator
+# from src.LPLocator.LPLocator import LPLocator
 from CSVReader.CSVReader import CSVReader
 from Dataset.DatasetManip import generate_records, parse_dataset
 from LPIdentification.LPIdentification import LPIdentification
-
+from LPLocator.LPLocator import LPLocator
 import matplotlib.pyplot as plt
 
 BASE_DATASET_PATH = '../CLPD_1200/'
@@ -27,7 +26,7 @@ def result_coversion(result_arr):
     return ret_str
 
 
-if __name__ == "__main__":
+def Main(photo_path):
 
     print("|--License Plate Recognition--|")
 
@@ -61,6 +60,7 @@ if __name__ == "__main__":
     else:
         print(f'Successfully loaded existing .h5 model.')
 
+
     files = os.listdir(LP_TEST_IMGS_PATH)
     file_cnt = len(files)
     counter = 1
@@ -74,24 +74,27 @@ if __name__ == "__main__":
         current_file = LP_TEST_IMGS_PATH + i
         print(f'Loaded {current_file.split("/")[-1]}.')
 
-        lpltr = LPLocator(current_file)
-        img_lp_highlighted, img_lp_cropped, char_imgs = lpltr.rough_process()
 
-        if len(char_imgs) == 0:
-            plt.subplot(size[0], size[1], counter)
-            plt.title('Failed')
-            plt.imshow(img_lp_highlighted)
-            print(f'Failed to identify the license plate...')
-        else:
-            result = zh_identifier.identify_chars([char_imgs[0]])
-            result.append(en_identifier.identify_chars(char_imgs[1:]))
+    lpltr = LPLocator(current_file)
+    img_lp_highlighted, img_lp_cropped, char_imgs = lpltr.rough_process()
+    img, shadow_image, sliced_photos = lpltr.return_image()
 
-            plt.subplot(size[0], size[1], counter)
-            plt.title(result_coversion(result))
-            plt.imshow(img_lp_highlighted)
-        counter += 1
 
-    plt.show()
+    if len(char_imgs) == 0:
+        print(f'Failed to identify the license...')
+    else:
+        result = zh_identifier.identify_chars([char_imgs[0]])
+        result.append(en_identifier.identify_chars(char_imgs[1:]))
+
+        # plt.imshow(img_lp_highlighted)
+        #plt.imshow(shadow_image)
+       # plt.imshow(sliced_photos)
+       # plt.title(result_coversion(result))
+        #plt.show()
+
+    return img_lp_highlighted, shadow_image, sliced_photos, result_coversion(result)
+        # os.system("pause")
+
 
     # os.system("pause")
 

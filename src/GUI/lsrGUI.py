@@ -6,7 +6,8 @@ import os
 import re
 import pathlib
 import PIL
-from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication
 
 
 class lsrGUI(object):

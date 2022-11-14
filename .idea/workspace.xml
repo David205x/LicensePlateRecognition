@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="92032a83-1945-41cd-b51c-d4141a04ee52" name="Changes" comment="" />
+    <list default="true" id="92032a83-1945-41cd-b51c-d4141a04ee52" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/LicensePlateRecognition.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/LicensePlateRecognition.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/license_plate_test.tfrecords" beforeDir="false" afterPath="$PROJECT_DIR$/model/license_plate_test.tfrecords" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Dataset/DatasetManip.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Dataset/DatasetManip.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/LPLocator/LPLocator.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/LPLocator/LPLocator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -26,6 +34,15 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
+<<<<<<< HEAD
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/src/main.py" />
+    <property name="settings.editor.selected.configurable" value="PyScientificConfigurable" />
+  </component>
+=======
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "RunOnceActivity.OpenProjectViewOnStart": "true",
@@ -35,6 +52,7 @@
     "settings.editor.selected.configurable": "preferences.externalTools"
   }
 }]]></component>
+>>>>>>> 2688532b3bf99a33a7398d5b1d48b5c70ff218d6
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="E:\code\人工智能导论\LicensePlateRecognition\LicensePlateRecognition\src\LPImage" />
@@ -43,7 +61,7 @@
       <recent name="E:\code\人工智能导论\LicensePlateRecognition\LicensePlateRecognition\src" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.main">
     <configuration name="LicensePlateRecognition" type="PythonConfigurationType" factoryName="Python">
       <module name="LicensePlateRecognition" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -66,6 +84,32 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="main" type="PythonConfigurationType" factoryName="Python">
+      <module name="LicensePlateRecognition" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="D:\pyCodes\Scripts\python.exe" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/main.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.main" />
+      <item itemvalue="Python.LicensePlateRecognition" />
+    </list>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -78,10 +122,19 @@
       <workItem from="1667182601400" duration="1066000" />
       <workItem from="1667201429221" duration="60320000" />
       <workItem from="1667373295116" duration="42425000" />
+<<<<<<< HEAD
+<<<<<<< HEAD
+      <workItem from="1667554000263" duration="26605000" />
+      <workItem from="1667628578010" duration="3550000" />
+=======
+      <workItem from="1667554000263" duration="69936000" />
+>>>>>>> 2688532b3bf99a33a7398d5b1d48b5c70ff218d6
+=======
       <workItem from="1667554000263" duration="72001000" />
       <workItem from="1667877134033" duration="13615000" />
       <workItem from="1667991375051" duration="620000" />
       <workItem from="1668335763998" duration="6979000" />
+>>>>>>> 934e1379bd706ed8b1a9d60a89aee22df0fc07c1
     </task>
     <servers />
   </component>
@@ -98,6 +151,7 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -111,6 +165,7 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/carsplate$main.coverage" NAME="main Coverage Results" MODIFIED="1667638749437" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
     <SUITE FILE_PATH="coverage/LicensePlateRecognition$main.coverage" NAME="main Coverage Results" MODIFIED="1667182763392" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
     <SUITE FILE_PATH="coverage/LicensePlateRecognition$LicensePlateRecognition.coverage" NAME="LicensePlateRecognition Coverage Results" MODIFIED="1668396777063" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
   </component>

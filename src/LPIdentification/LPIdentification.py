@@ -147,6 +147,8 @@ class LPIdentification(object):
 
         model = keras.Sequential()
 
+
+
         model.add(Conv2D(filters=128, kernel_size=3, padding='valid', activation='relu', input_shape=_input_shape))
         model.add(MaxPool2D(pool_size=4, strides=4, padding="valid"))
         model.add(Conv2D(filters=68, kernel_size=3, padding='valid', activation='relu'))

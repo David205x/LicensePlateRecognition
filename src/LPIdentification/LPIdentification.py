@@ -200,6 +200,8 @@ class LPIdentification(object):
             self.train_model(self.train_images, self.train_labels, self.test_images, self.test_labels)
         self.h5_model = tf.keras.models.load_model(self.save_path)
 
+        print(self.h5_model.summary())
+
     def identify_chars(self, char_imgs):
         result = []
         for cimg in char_imgs:

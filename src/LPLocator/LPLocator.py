@@ -422,7 +422,7 @@ class LPLocator(object):
 
         self.img = None
         self.lp_img = None
-        self.sliced_photos = None
+        self.lp_img_with_rects = None
         self.shadow_image = None
         self.w = None
         self.h = None
@@ -439,7 +439,13 @@ class LPLocator(object):
             return
 
     def return_image(self):
-        return self.img, self.shadow_image, self.sliced_photos
+
+        print(f'{self.img is None} {self.shadow_image is None} {self.lp_img_with_rects is None}')
+
+        if self.lp_img_with_rects is None:
+            return self.img, self.shadow_image, self.lp_img
+        else:
+            return self.img, self.shadow_image, self.lp_img_with_rects
 
     def show_self(self, color_map):
         plt.imshow(self.img, cmap=color_map)
@@ -486,22 +492,24 @@ class LPLocator(object):
             pts = find_lp(img_bin)
 
             if pts is None:
+                self.lp_img = self.img
+                self.shadow_image, _ = cast_shadows(self.lp_img)
                 return self.img, self.lp_img, []
 
             vertices, rect = locate_rect(pts, -6)
 
         self.lp_img = perspective_warp(self.img, vertices)
         draw_rect(self.img, rect, vertices, 4)
-        #
 
         lp_shadow_img, dots = cast_shadows(self.lp_img)
 
         right_start, char_w, gap_w = analyze_shadows(lp_shadow_img, dots)
         self.shadow_image = lp_shadow_img
         # show_image(lp_shadow_img) #垂直投影
+
         if char_w is not None and gap_w is not None:
             slices, lp_img = crop_chars(self.lp_img, right_start, char_w, gap_w, self.std_flag)
-            self.sliced_photos = lp_img
+            self.lp_img_with_rects = lp_img
             return self.img, self.lp_img, slices
         else:
             return self.img, self.lp_img, []

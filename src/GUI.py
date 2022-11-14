@@ -17,13 +17,13 @@ from PyQt5.QtGui import QPalette, QBrush, QPixmap, QImage
 import tkinter as tk
 from tkinter import filedialog
 # from src.LPLocator.LPLocator import LPLocator
-import main
+import Main
 
 
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("车牌号码识别")
-        Form.resize(1050, 543)  #793 543
+        Form.resize(1050, 543)  # 793 543
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -120,11 +120,9 @@ class Ui_Form(object):
         self.Button_exit.clicked['bool'].connect(self.quit)
         self.Button_select.clicked['bool'].connect(self.select_picture)
 
-
     def quit(self):
         print("1")
         sys.exit()
-
 
     def select_picture(self):
         root = tk.Tk()
@@ -144,14 +142,14 @@ class Ui_Form(object):
         self.label_phote.setPixmap(pixImg)
         # print('Folderpath:', Folderpath)
 
-        img_lp_highlighted, shadow_image, sliced_photos, result = main.Main(Filepath)
+        img_lp_highlighted, shadow_image, sliced_photos, result = Main.Main(Filepath)
         img_located = img_lp_highlighted
         shrink = cv2.cvtColor(img_located, cv2.COLOR_BGR2RGB)
         img_located = QtGui.QImage(shrink.data,
-                                  shrink.shape[1],
-                                  shrink.shape[0],
-                                  shrink.shape[1] * 3,
-                                  QtGui.QImage.Format_BGR888)
+                                   shrink.shape[1],
+                                   shrink.shape[0],
+                                   shrink.shape[1] * 3,
+                                   QtGui.QImage.Format_BGR888)
 
         newWidth_located = int(430)
         newHeight_located = int(300)
@@ -159,21 +157,20 @@ class Ui_Form(object):
         self.label_phote.resize(newWidth, newHeight)
         self.label_located.setPixmap(QtGui.QPixmap.fromImage(img_located.scaled(size_located, Qt.IgnoreAspectRatio)))
 
-
         shrink = cv2.cvtColor(sliced_photos, cv2.COLOR_BGR2RGB)
         sliced_photos = QtGui.QImage(shrink.data,
-                                   shrink.shape[1],
-                                   shrink.shape[0],
-                                   shrink.shape[1] * 3,
-                                   QtGui.QImage.Format_BGR888)
-        self.label_division.setPixmap(QtGui.QPixmap.fromImage(sliced_photos))
-
-        shrink = cv2.cvtColor(shadow_image, cv2.COLOR_BGR2RGB)
-        shadow_image = QtGui.QImage(shrink.data,
                                      shrink.shape[1],
                                      shrink.shape[0],
                                      shrink.shape[1] * 3,
                                      QtGui.QImage.Format_BGR888)
+        self.label_division.setPixmap(QtGui.QPixmap.fromImage(sliced_photos))
+
+        shrink = cv2.cvtColor(shadow_image, cv2.COLOR_BGR2RGB)
+        shadow_image = QtGui.QImage(shrink.data,
+                                    shrink.shape[1],
+                                    shrink.shape[0],
+                                    shrink.shape[1] * 3,
+                                    QtGui.QImage.Format_BGR888)
         self.label_projection.setPixmap(QtGui.QPixmap.fromImage(shadow_image))
 
         self.lineEdit_result.setText(result)

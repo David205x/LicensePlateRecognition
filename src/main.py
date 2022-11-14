@@ -1,7 +1,6 @@
 import os
 import math
 import sys
-
 import cv2
 
 # from src.LPLocator.LPLocator import LPLocator
@@ -36,7 +35,13 @@ records_manager = RecordsMng(gen_new=False, train_new=False)
 en_identifier, zh_identifier = records_manager.get_identifiers()
 
 
+def get_summary():
+    print(records_manager.en_identifier.h5_model.summary())
+    print(records_manager.en_identifier.h5_model.summary())
+
+
 def Main(photo_path):
+
     print("|--License Plate Recognition--|")
 
     # plt.rcParams['font.sans-serif'] = ['SimHei']
@@ -53,11 +58,11 @@ def Main(photo_path):
 
     current_file = photo_path
     print(f'Loaded {current_file}.')
-
+    # >>>>>>>>>>> 2022-11-14 模型展示
+    get_summary()
     locator = LPLocator(current_file)
     img_lp_highlighted, img_lp_cropped, char_imgs = locator.rough_process()
     img, shadow_image, img_with_rects = locator.return_image()
-
     if len(char_imgs) == 0:
         print(f'Failed to identify the license...')
         final_result = '识别失败'

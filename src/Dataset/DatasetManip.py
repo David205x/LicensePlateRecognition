@@ -7,6 +7,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 EN_ROOT = '../dataset_v2/en/'
 ZH_ROOT = '../dataset_v2/zh/'
 EN_TFR_PATH = '../model/license_plate_en.tfrecords'
@@ -118,6 +119,7 @@ def generate_records(mtype):
     for label, name in enumerate(picked_class):
 
         # print(f'label: {label} name: {name}')
+
 
         path = picked_root + str(name) + '/'
 

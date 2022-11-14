@@ -51,7 +51,8 @@ def preprocess(img_gray, img_HSV, img_B, img_R):
 
 
 def find_lp(img_bin):
-    contours, _ = cv2.findContours(img_bin, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    # cv2.imshow("test", cv2.Canny(img_bin, 32, 68))
+    contours, _ = cv2.findContours(img_bin, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     if len(contours) == 0:
         return None
 
@@ -70,12 +71,13 @@ def find_lp(img_bin):
             return None
         ratio = w / h
         area = w * h
-
-        if (ratio > 3) and (ratio < 4) and (w > w_max) and (h > h_max):
+        print(f'{ratio} {i}')
+        if (w > w_max) and (h > h_max):
             h_max = h
             w_max = w
             index = i
 
+    print(f'{index}')
     points = np.array(contours[index][:, 0])
 
     return points
@@ -93,10 +95,16 @@ def locate_rect(points, offset=0):
     ry = np.max(box[:, 1][np.where(box[:, 0] == rx)])
 
     ty = np.min(box[:, 1])
-    tx = np.min(box[:, 0][np.where(box[:, 1] == ty)])
+    # >>>>>>>>> 2022-11-14 before change
+    # tx = np.min(box[:, 0][np.where(box[:, 1] == ty)])
+    # >>>>>>>>> 2022-11-14 before change
+    tx = np.max(box[:, 0][np.where(box[:, 1] == ty)])
 
     by = np.max(box[:, 1])
-    bx = np.max(box[:, 0][np.where(box[:, 1] == by)])
+    # >>>>>>>>> 2022-11-14 before change
+    # bx = np.max(box[:, 0][np.where(box[:, 1] == by)])
+    # >>>>>>>>> 2022-11-14 before change
+    bx = np.min(box[:, 0][np.where(box[:, 1] == by)])
 
     # print(box)
     # print(f'\t\t({tx}, {ty})')
@@ -104,7 +112,10 @@ def locate_rect(points, offset=0):
     # print(f'\t\t({bx}, {by})')
 
     v = []
-    if ang >= 45:
+    if abs(ang) >= 45:
+        # >>>>>>>>> 2022-11-14 before change
+        # v = np.array([(lx, ly), (tx, ty), (rx, ry), (bx, by)])
+        # >>>>>>>>> 2022-11-14 before change
         v = np.array([(lx, ly), (tx, ty), (rx, ry), (bx, by)])
     else:
         v = np.array([(tx, ty), (rx, ry), (bx, by), (lx, ly)])
@@ -131,19 +142,17 @@ def extract_lp(img, rect, offset=0):
 
 
 def perspective_warp(img, vertices):
-    dw = LP_WIDTH
-    dh = LP_HEIGHT
+    dw = LP_WIDTH - 5
+    dh = LP_HEIGHT - 5
 
     src = vertices
     dst = [(0, 0), (dw, 0), (dw, dh), (0, dh)]
-
     # print(f'{vertices} -> {dst}')
 
     warp_src, warp_dst = np.float32(src), np.float32(dst)
     # np.array(src, dtype=np.float32), np.array(dst, dtype=np.float32)
 
     mat = cv2.getPerspectiveTransform(warp_src, warp_dst)
-
     return cv2.warpPerspective(img, mat, dsize=(dw, dh))
 
 
@@ -159,9 +168,78 @@ def draw_rect(img, r, v, stroke_width, offset=0):
     return
 
 
+def compute(img, min_percentile, max_percentile):
+    """计算分位点，目的是去掉图1的直方图两头的异常情况"""
+    max_percentile_pixel = np.percentile(img, max_percentile)
+    min_percentile_pixel = np.percentile(img, min_percentile)
+
+    return max_percentile_pixel, min_percentile_pixel
+
+
+def aug(src, seq):
+    """图像亮度增强"""
+    f = False
+    src = np.array(src)
+    src.flags.writeable = True
+    ret = get_lightness(src) / 140
+
+    if get_lightness(src) > 140:
+        f = True
+        ret = get_lightness(src) / 140 - 0.68
+        print("第" + str(seq) + "张，图片亮度足够，减弱" + str(ret))
+    else:
+        print("第" + str(seq) + "张，图片亮度不足，增强" + str(ret))
+
+    # 先计算分位点，去掉像素值中少数异常值，这个分位点可以自己配置。
+    # 比如1中直方图的红色在0到255上都有值，但是实际上像素值主要在0到20内。
+    max_percentile_pixel, min_percentile_pixel = compute(src, 1, 99)
+
+    # 去掉分位值区间之外的值
+    src[src >= max_percentile_pixel] = max_percentile_pixel
+    src[src <= min_percentile_pixel] = min_percentile_pixel
+    # 将分位值区间拉伸到0到255，这里取了255*0.1与255*0.9是因为可能会出现像素值溢出的情况，所以最好不要设置为0到255。
+    out = np.zeros(src.shape, src.dtype)
+
+    cv2.normalize(src, out, 255 * 0.1, 255 * 0.9, cv2.NORM_MINMAX)
+    fI = out / 255.0
+    gamma = 1 + ret + 0.08 * ret / 0.6
+    if not f:
+        # 伽马变换
+        gamma = 0.3 + ret
+        # print("第" + str(seq) + "张" + str(1.8 * ret))
+        # print("第" + str(seq) + "张" + str(gamma))
+
+    out = np.power(fI, gamma)
+
+    return out, ret
+
+
+def get_lightness(src):
+    # 计算亮度
+    hsv_image = cv2.cvtColor(src, cv2.COLOR_BGR2HSV)
+    lightness = hsv_image[:, :, 2].mean()
+
+    return lightness
+
+
 def cast_shadows(lp_img):
-    img_gray = cv2.cvtColor(lp_img, cv2.COLOR_RGB2GRAY)
-    _, result = cv2.threshold(img_gray, 0x88, 0xff, cv2.THRESH_BINARY)
+
+    lp_test, ret = aug(lp_img, "1")
+
+    lp_test = lp_test * 255
+
+    lp_test = lp_test.astype("uint8")
+
+    img_gray = cv2.cvtColor(lp_test, cv2.COLOR_RGB2GRAY)
+
+    # print(img_gray_test)
+
+    # cv2.imshow(str(124), img_gray)
+    # >>>>>>>>>> 2022-11-14 before change
+    # img_gray = cv2.cvtColor(lp_img, cv2.COLOR_RGB2GRAY)
+    # <<<<<<< 2022-11-14 before change
+
+    _, result = cv2.threshold(img_gray, 0x8f, 0xff, cv2.THRESH_BINARY)
 
     height, width = result.shape
     dot = [0 for _ in range(width)]
@@ -453,7 +531,7 @@ class LPLocator(object):
 
     def preprocess(self):
 
-        self.img = cv2.resize(self.img, (640, 480))
+        # self.img = cv2.resize(self.img, (640, 480))
 
         img = self.img
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
@@ -489,6 +567,7 @@ class LPLocator(object):
         else:
             img_gray, img_HSV, img_B, img_R = self.preprocess()
             img_bin = preprocess(img_gray, img_HSV, img_B, img_R)
+
             pts = find_lp(img_bin)
 
             if pts is None:
@@ -499,8 +578,8 @@ class LPLocator(object):
             vertices, rect = locate_rect(pts, -6)
 
         self.lp_img = perspective_warp(self.img, vertices)
+        # cv2.imshow("lp_img", self.lp_img)
         draw_rect(self.img, rect, vertices, 4)
-
         lp_shadow_img, dots = cast_shadows(self.lp_img)
 
         right_start, char_w, gap_w = analyze_shadows(lp_shadow_img, dots)

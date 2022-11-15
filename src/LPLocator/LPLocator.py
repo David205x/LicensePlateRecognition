@@ -207,7 +207,7 @@ def check_valid(pts, center):
 def find_four_points(contour_points):
     try:
         ret = cv2.approxPolyDP(np.array(contour_points), 7, 1)
-        # print(ret.shape)
+
         if len(ret) == 4:
             ret, center = order_points(ret)
             ret = ret.tolist()
@@ -232,7 +232,6 @@ def locate_rect(points, offset=0):
     try:
 
         ang = rect[-1]
-
         box = np.int0(cv2.boxPoints(rect))
         # print(box)
         lx = np.min(box[:, 0])
@@ -736,8 +735,9 @@ class LPLocator(object):
         for i in range(4):
             res.append([np.array(vertices[i])])
         # print(np.array(res).shape)
-
-        ret = find_four_points(hull)
+        ret = None
+        if len(hull) > 0:
+            ret = find_four_points(hull)
         if ret is not None:
             vertices = ret
             self.lp_img = perspective_warp(self.img, vertices)

@@ -401,30 +401,30 @@ class Ui_Form(object):
                 item = QtWidgets.QTableWidgetItem()
                 self.table_matrix.setItem(i, j, item)
 
-            brush = QtGui.QBrush(QtGui.QColor(190, 255, 155))
+            brush = QtGui.QBrush(QtGui.QColor(50, 255, 80))
             brush.setStyle(QtCore.Qt.SolidPattern)
             self.table_matrix.item(i, i).setBackground(brush)
 
 
-        self.table_matrix.horizontalHeader().setDefaultSectionSize(40)
-        self.table_matrix.verticalHeader().setDefaultSectionSize(40)
+        self.table_matrix.horizontalHeader().setDefaultSectionSize(30)
+        self.table_matrix.verticalHeader().setDefaultSectionSize(30)
         self.gridLayout_3.addWidget(self.table_matrix, 2, 0, 4, 1)
-        self.table_indecator = QtWidgets.QTableWidget(self.tab_2)
-        self.table_indecator.setObjectName("table_indecator")
-        self.table_indecator.setColumnCount(5)
-        self.table_indecator.setRowCount(36)
+        self.table_indicator = QtWidgets.QTableWidget(self.tab_2)
+        self.table_indicator.setObjectName("table_indicator")
+        self.table_indicator.setColumnCount(5)
+        self.table_indicator.setRowCount(36)
         for i in range(36):
             item = QtWidgets.QTableWidgetItem()
-            self.table_indecator.setVerticalHeaderItem(i, item)
+            self.table_indicator.setVerticalHeaderItem(i, item)
             for j in range(5):
                 item = QtWidgets.QTableWidgetItem()
-                self.table_indecator.setItem(i, j, item)
+                self.table_indicator.setItem(i, j, item)
         for i in range(5):
             item = QtWidgets.QTableWidgetItem()
-            self.table_indecator.setHorizontalHeaderItem(i, item)
+            self.table_indicator.setHorizontalHeaderItem(i, item)
 
-        self.table_indecator.horizontalHeader().setDefaultSectionSize(105)
-        self.gridLayout_3.addWidget(self.table_indecator, 2, 2, 1, 1)
+        self.table_indicator.horizontalHeader().setDefaultSectionSize(105)
+        self.gridLayout_3.addWidget(self.table_indicator, 2, 2, 1, 1)
         spacerItem12 = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         self.gridLayout_3.addItem(spacerItem12, 3, 2, 1, 1)
         self.label_6 = QtWidgets.QLabel(self.tab_2)
@@ -535,18 +535,18 @@ class Ui_Form(object):
         self.table_matrix.setSortingEnabled(False)
         self.table_matrix.setSortingEnabled(__sortingEnabled)
         for i in range(36):
-            item = self.table_indecator.verticalHeaderItem(i)
-            item.setText(_translate("Form", head[i]))
+            item = self.table_indicator.verticalHeaderItem(i)
+            item.setText(_translate("Form", ""))
 
-        item = self.table_indecator.horizontalHeaderItem(0)
+        item = self.table_indicator.horizontalHeaderItem(0)
         item.setText(_translate("Form", "类"))
-        item = self.table_indecator.horizontalHeaderItem(1)
+        item = self.table_indicator.horizontalHeaderItem(1)
         item.setText(_translate("Form", "Accuracy"))
-        item = self.table_indecator.horizontalHeaderItem(2)
+        item = self.table_indicator.horizontalHeaderItem(2)
         item.setText(_translate("Form", "Precision"))
-        item = self.table_indecator.horizontalHeaderItem(3)
+        item = self.table_indicator.horizontalHeaderItem(3)
         item.setText(_translate("Form", "Recall"))
-        item = self.table_indecator.horizontalHeaderItem(4)
+        item = self.table_indicator.horizontalHeaderItem(4)
         item.setText(_translate("Form", "F1_score"))
         self.label_6.setText(_translate("Form", "分类指标"))
         self.label_5.setText(_translate("Form", "混淆矩阵"))
@@ -632,16 +632,27 @@ class Ui_Form(object):
         if len(confusion) == 0 or len(evaluation) == 0: return
         for i in range(36):
             for j in range(36):
-                if confusion[i][j] == 0:    self.table_matrix.item(i,j).setText('')
-                elif i == j:                self.table_matrix.item(i,j).setText(str(int(confusion[i][j])))
-                else:
-                    brush = QtGui.QBrush(QtGui.QColor(248, 255, 167))
+                content = str(int(confusion[i][j]))
+                if confusion[i][j] == 0:    content = ''
+                elif i != j:
+                    brush = QtGui.QBrush(QtGui.QColor(200, 255, 210))
                     brush.setStyle(QtCore.Qt.SolidPattern)
-                    self.table_matrix.item(i, i).setBackground(brush)
-                    self.table_matrix.item(i, j).setText(str(int(confusion[i][j])))
-            self.table_indecator.item(i,0).setText(classes[i])
-            for j in range(4):
-                self.table_indecator.item(i,j+1).setText(str(round(evaluation[i][j], 3)))
+                    self.table_matrix.item(i, j).setBackground(brush)
+
+                self.table_matrix.item(i, j).setText(content)
+                self.table_matrix.item(i, j).setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+
+            for j in range(5):
+                if j == 0:
+                    self.table_indicator.item(i, j).setText(classes[i])
+                else:
+                    self.table_indicator.item(i, j).setText(str('%.3f' % evaluation[i][j-1]))
+                self.table_indicator.item(i, j).setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+            if evaluation[i][1] == 1:
+                brush = QtGui.QBrush(QtGui.QColor(50, 255, 80))
+                brush.setStyle(QtCore.Qt.SolidPattern)
+                self.table_indicator.item(i, 0).setBackground(brush)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

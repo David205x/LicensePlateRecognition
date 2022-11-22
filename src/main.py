@@ -31,7 +31,7 @@ def result_coversion(result_arr):
     return ret_str
 
 
-records_manager = RecordsMng(gen_new=False, train_new=False)
+records_manager = RecordsMng(gen_new=False, train_new=True)        # TODO UNTEST
 en_identifier, zh_identifier = records_manager.get_identifiers()
 
 
@@ -61,7 +61,7 @@ def Main(photo_path):
     # >>>>>>>>>>> 2022-11-14 模型展示
     get_summary()
     locator = LPLocator(current_file)
-    img_lp_highlighted, img_lp_cropped, char_imgs = locator.rough_process()
+    img_lp_highlighted, img_lp_cropped, char_imgs = locator.rough_process()     # TODO crashed when no palette detected
     img, shadow_image, img_with_rects = locator.return_image()
     if len(char_imgs) == 0:
         print(f'Failed to identify the license...')

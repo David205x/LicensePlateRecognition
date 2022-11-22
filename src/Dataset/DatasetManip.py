@@ -188,7 +188,7 @@ def parse_dataset(tfr_name):
     test_labels = []
 
     tot = min(len(imgs), len(labels))
-    test_portion = -1
+    test_portion = 6               # TODO origin: -1
     if test_portion > 0:
         for i in range(tot):
             if i % test_portion == 0:

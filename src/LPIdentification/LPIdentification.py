@@ -122,7 +122,7 @@ def one_hot(labels):
     return onehot_labels
 
 
-def compute_matrix(TP, FP, TN, FN):     # TODO UNTEST
+def compute_matrix(TP, FP, TN, FN):  # TODO UNTEST
     accuracy = (TP + TN) / (TP + FP + TN + FN) if (TP + FP + TN + FN) != 0 else 0
     precision = TP / (TP + FP) if (TP + FP) != 0 else 0
     recall = TP / (TP + FN) if (TP + FN) != 0 else 0
@@ -160,11 +160,9 @@ class LPIdentification(object):
 
         model = keras.Sequential()
 
-
-
         model.add(Conv2D(filters=128, kernel_size=3, padding='valid', activation='relu', input_shape=_input_shape))
         model.add(MaxPool2D(pool_size=4, strides=4, padding="valid"))
-        model.add(Conv2D(filters=68, kernel_size=3, padding='valid', activation='relu'))
+        model.add(Conv2D(filters=64, kernel_size=3, padding='valid', activation='relu'))
         model.add(MaxPool2D(pool_size=2, strides=2, padding="valid"))
         model.add(Flatten())
         model.add(Dense(128, activation='relu'))
@@ -183,61 +181,87 @@ class LPIdentification(object):
         _test_labels = one_hot(_test_labels)
 
         self.build_model(_input_shape=(STD_H, STD_W, STD_D))
-        self.model.compile(optimizer=tf.optimizers.Adam(), loss="categorical_crossentropy", metrics=['accuracy'])
 
         if self.model_type == 'zh':
-            epoch = 50
+            epoch_base = 50
         else:
-            epoch = 40
+            epoch_base = 40
 
-        self.model.fit(x=_train_images, y=_train_labels, epochs=epoch)
+        learning_rates = [0.005]
+        epoch_mul = [1]
+        batch_sizes = [32]
 
-        loss, acc = self.model.evaluate(x=_test_images, y=_test_labels)
-        metrics = [tf.keras.metrics.sparse_categorical_accuracy]
+        best_hyperparams = []
+        cur_accuracy = -1.0
 
-        print(f'accuracy: {acc}\nloss: {loss}\nmetrics: {metrics}')
+        for lr in learning_rates:
+            self.model.compile(optimizer=tf.optimizers.Adam(learning_rate=lr), loss="categorical_crossentropy",
+                               metrics=['accuracy'])
+            for e in epoch_mul:
+                for b in batch_sizes:
+                    self.model.fit(verbose=0, x=_train_images, y=_train_labels, batch_size=b,
+                                   epochs=int(epoch_base * e), shuffle=True)
 
-        # TODO UNTEST
-        conf_matrix = [[0 for j in range(68)] for i in range(68)]
-        # conf_matrix = [[0] * 68] * 68
-        eval_indicator = []
-        TP = [0] * 68
-        FP = [0] * 68
-        TN = [0] * 68
-        FN = [0] * 68
+                    loss, acc = self.model.evaluate(verbose=0, x=_test_images, y=_test_labels)
 
-        corr = 0
-        predictions = self.model.predict(_test_images)
-        for i in range(len(_test_images)):
-            target = np.argmax(predictions[i])
-            label = np.argmax(_test_labels[i])
+                    if acc > cur_accuracy:
+                        cur_accuracy = acc
+                        best_hyperparams = [lr, e, b]
 
-            conf_matrix[label][target] += 1
-            if label == target:
-                corr += 1
-                if self.model_type == 'en':       # TODO UNTEST
-                    for ii in range(36):
-                        if ii == label: TP[label] += 1
-                        else:           TN[label] += 1
-            elif self.model_type == 'en':
-                for ii in range(36):
-                    if ii == label:     FP[label] += 1
-                    else:               FN[label] += 1
+                    metrics = [tf.keras.metrics.sparse_categorical_accuracy]
+                    print('*' * 40)
+                    print(
+                        f'model type: {self.model_type}\nparam: l={lr}, e={int(epoch_base * e)}, b={b}\n'
+                        f'accuracy: {acc}\nloss: {loss}\nmetrics: {metrics}')
 
-        # TODO UNTEST
-        if self.model_type == 'en':
-            for i in range(36):
-                eval_indicator.append(compute_matrix(TP[i], FP[i], TN[i], FN[i]))
-            self.evaluation = eval_indicator
-            self.confusion = conf_matrix
-            self.save_matrix(eval_indicator, 'evaluation.dat')
-            self.save_matrix(conf_matrix, 'confusion.dat')
+                    # TODO UNTEST
+                    conf_matrix = [[0 for j in range(68)] for i in range(68)]
+                    # conf_matrix = [[0] * 68] * 68
+                    eval_indicator = []
+                    TP = [0] * 68
+                    FP = [0] * 68
+                    TN = [0] * 68
+                    FN = [0] * 68
 
-        print(conf_matrix)
+                    corr = 0
+                    predictions = self.model.predict(_test_images)
+                    for i in range(len(_test_images)):
+                        target = np.argmax(predictions[i])
+                        label = np.argmax(_test_labels[i])
 
-        print(f'correct count: {corr}\ncorrect pct: {corr / len(_test_images)}')
+                        conf_matrix[label][target] += 1
+                        if label == target:
+                            corr += 1
+                            if self.model_type == 'en':  # TODO UNTEST
+                                for ii in range(36):
+                                    if ii == label:
+                                        TP[label] += 1
+                                    else:
+                                        TN[label] += 1
+                        elif self.model_type == 'en':
+                            for ii in range(36):
+                                if ii == label:
+                                    FP[label] += 1
+                                else:
+                                    FN[label] += 1
+
+                    # TODO UNTEST
+                    if self.model_type == 'en':
+                        for i in range(36):
+                            eval_indicator.append(compute_matrix(TP[i], FP[i], TN[i], FN[i]))
+                        self.evaluation = eval_indicator
+                        self.confusion = conf_matrix
+                        self.save_matrix(eval_indicator, 'evaluation.dat')
+                        self.save_matrix(conf_matrix, 'confusion.dat')
+
+                        # print(conf_matrix)
+                        print(f'correct count: {corr}\ncorrect pct: {corr / len(_test_images)}')
+
+                    print('*' * 40)
 
         self.model.save(self.save_path, overwrite=True)
+        print(f'Best Hyperparameters: {best_hyperparams}')
+
         print(f'Model saved at {self.save_path}')
 
     def save_matrix(self, matrix, filename):
@@ -250,7 +274,7 @@ class LPIdentification(object):
 
     def load_matrix(self, filename):
         matrix = []
-        with open('../model/'+filename, 'rb') as readfile:
+        with open('../model/' + filename, 'rb') as readfile:
             column = struct.unpack('d', readfile.read(8))[0]
             row = struct.unpack('d', readfile.read(8))[0]
             print(column, ',', row)

@@ -4,6 +4,7 @@ import random
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.spatial import distance as dist
 
 
 def show_image(img):
@@ -44,14 +45,16 @@ def preprocess(img_gray, img_HSV, img_B, img_R):
     img_close = cv2.morphologyEx(img_di, cv2.MORPH_CLOSE, kernel_big)
     img_close = cv2.GaussianBlur(img_close, (5, 5), 0)
     _, img_bin = cv2.threshold(img_close, 115, 255, cv2.THRESH_BINARY)
-
+    # cv2.imshow("img_bin", img_bin)
     # show_gray_img(img_bin)
 
     return img_bin
 
 
 def find_lp(img_bin):
-    contours, _ = cv2.findContours(img_bin, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    # cv2.imshow("test", cv2.Canny(img_bin, 32, 68))
+    contours, _ = cv2.findContours(img_bin, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+
     if len(contours) == 0:
         return None
 
@@ -70,53 +73,205 @@ def find_lp(img_bin):
             return None
         ratio = w / h
         area = w * h
-
-        if (ratio > 3) and (ratio < 4) and (w > w_max) and (h > h_max):
+        print(f'{ratio} {i}')
+        if (w > w_max) and (h > h_max):
             h_max = h
             w_max = w
             index = i
 
+    print(f'{index}')
     points = np.array(contours[index][:, 0])
 
     return points
 
 
+def locate_convex(points):
+    return cv2.convexHull(points)
+
+
+def dis(p1, p2):
+    dx = p1[0] - p2[0]
+    dy = p1[1] - p2[1]
+    return math.sqrt(dx * dx + dy * dy)
+
+
+def point_cmp(p_a, p_b, center):
+
+    if p_a[0] == 0 and p_b[0] == 0:
+        return p_a[1] > p_b[1]
+    a = np.array(p_a).tolist()
+    b = np.array(p_b).tolist()
+    a[0], a[1] = p_a[0], 2 * center[1] - p_a[1]
+    b[0], b[1] = p_b[0], 2 * center[1] - p_b[1]
+    det = (a[0] - center[0]) * (b[1] - center[1]) - (b[0] - center[0]) * (a[1] - center[1])
+
+    if det > 0:
+        return True
+    if det < 0:
+        return False
+
+    return True
+
+    # d1 = p_a[0] + p_a[1]
+    # d2 = p_b[0] + p_b[1]
+    # if d1 == d2:
+    #     return p_a[0] > p_b[0]
+    # return d1 > d2
+
+
+def clockwise_sort_points(points):
+    center = []
+    x = 0
+    y = 0
+    for i in range(len(points)):
+        x = x + points[i][0][0]
+        y = y + points[i][0][1]
+    center.append(int(x / len(points)))
+    center.append(int(y / len(points)))
+
+    for i in range(0, len(points) - 1):
+        for j in range(0, len(points) - i - 1):
+            if points[j][0][0] + points[j][0][1] > points[j + 1][0][0] + points[j + 1][0][1]:
+                tmp = points[j][0].tolist()
+                points[j][0] = points[j + 1][0]
+                points[j + 1][0] = np.array(tmp)
+
+    for i in range(0, len(points) - 1):
+        for j in range(0, len(points) - i - 1):
+            if point_cmp(points[j][0], points[j + 1][0], center):
+                tmp = points[j][0].tolist()
+                points[j][0] = points[j + 1][0]
+                points[j + 1][0] = np.array(tmp)
+
+   # print(points)
+    return points, center
+
+
+def order_points(pts):
+    return clockwise_sort_points(pts)
+
+
+def vec_len(p1, p2):
+    return math.sqrt(p1 * p1 + p2 * p2)
+
+
+def check_valid(pts, center):
+    points = np.array(pts).tolist()
+
+    for i in range(len(points)):
+        points[i][0][0], points[i][0][1] = points[i][0][0], 2 * center[1] - points[i][0][1]
+
+    vec_top = [points[1][0][0] - points[0][0][0], points[1][0][1] - points[0][0][1]]
+
+    vec_bottom = [points[3][0][0] - points[2][0][0], points[3][0][1] - points[2][0][1]]
+
+    vec_left = [points[0][0][0] - points[3][0][0], points[0][0][1] - points[3][0][1]]
+
+    vec_right = [points[2][0][0] - points[1][0][0], points[2][0][1] - points[1][0][1]]
+
+    # print(f'vec = {vec_top}\n{vec_bottom}\n{vec_left}\n{vec_right}')
+    res = []
+    if vec_top[0] == 0:
+        vec_top[0] = vec_top[0] + 1
+    if vec_top[1] == 0:
+        vec_top[1] = vec_top[1] + 1
+
+    if vec_bottom[0] == 0:
+        vec_bottom[0] = vec_bottom[0] + 1
+    if vec_bottom[1] == 0:
+        vec_bottom[1] = vec_bottom[1] + 1
+
+    if vec_left[0] == 0:
+        vec_left[0] = vec_left[0] + 1
+    if vec_left[1] == 0:
+        vec_left[1] = vec_left[1] + 1
+
+    if vec_right[0] == 0:
+        vec_right[0] = vec_right[0] + 1
+    if vec_right[1] == 0:
+        vec_right[1] = vec_right[1] + 1
+
+    res.append(abs(vec_bottom[0] / vec_top[0]))
+    res.append(abs(vec_bottom[1] / vec_top[1]))
+    res.append(abs(vec_right[0] / vec_left[0]))
+    res.append(abs(vec_right[1] / vec_left[1]))
+
+    print(f'res = {res}')
+
+    if (abs(res[0] - 1) > 0.2 or abs(res[1] - 1) > 0.2) and (abs(res[2] - 1) > 0.2 or abs(res[3] - 1) > 0.2):
+        return False
+
+    return True
+
+
+def find_four_points(contour_points):
+    try:
+        ret = cv2.approxPolyDP(np.array(contour_points), 7, 1)
+
+        if len(ret) == 4:
+            ret, center = order_points(ret)
+            ret = ret.tolist()
+            min_sum = 0
+            for i in range(4):
+                if ret[i][0][0] + ret[i][0][1] < ret[min_sum][0][0] + ret[min_sum][0][1]:
+                    min_sum = i
+            ret[0], ret[1], ret[2], ret[3] = ret[min_sum], ret[(min_sum + 1) % 4], ret[(min_sum + 2) % 4], ret[
+                (min_sum + 3) % 4]
+            if check_valid(ret, center):
+                return ret
+            else:
+                print("点集有误")
+                return None
+    except Exception as e:
+        print(e)
+    return None
+
+
 def locate_rect(points, offset=0):
     rect = cv2.minAreaRect(points)
-    ang = rect[-1]
-    box = np.int0(cv2.boxPoints(rect))
+    try:
 
-    lx = np.min(box[:, 0])
-    ly = box[:, 1][np.where(box[:, 0] == lx)][0]
+        ang = rect[-1]
+        box = np.int0(cv2.boxPoints(rect))
+        # print(box)
+        lx = np.min(box[:, 0])
+        ly = np.min(box[:, 1][np.where(abs(box[:, 0] - lx) <= 0)])
 
-    rx = np.max(box[:, 0])
-    ry = box[:, 1][np.where(box[:, 0] == rx)][0]
+        rx = np.max(box[:, 0])
 
-    ty = np.min(box[:, 1])
-    tx = box[:, 0][np.where(box[:, 1] == ty)][0]
+        ry = np.max(box[:, 1][np.where(abs(box[:, 0] - rx) <= 0)])
 
-    by = np.max(box[:, 1])
-    bx = box[:, 0][np.where(box[:, 1] == by)][0]
+        ty = np.min(box[:, 1])
+        # >>>>>>>>> 2022-11-14 before change
+        # tx = np.min(box[:, 0][np.where(box[:, 1] == ty)])
+        # >>>>>>>>> 2022-11-14 before change
+        tx = np.max(box[:, 0][np.where(abs(box[:, 1] - ty) <= 0)])
 
-    # print(box)
-    # print(f'\t\t({tx}, {ty})')
-    # print(f'({lx}, {ly})\t\t({rx}, {ry})')
-    # print(f'\t\t({bx}, {by})')
+        by = np.max(box[:, 1])
+        # print(f'{[]} -> {by}')
+        # >>>>>>>>> 2022-11-14 before change
+        # bx = np.max(box[:, 0][np.where(box[:, 1] == by)])
+        # >>>>>>>>> 2022-11-14 before change
+        bx = np.min(box[:, 0][np.where(box[:, 1] == by)])
+        # print(box)
+        # print(f'\t\t({tx}, {ty})')
+        # print(f'({lx}, {ly})\t\t({rx}, {ry})')
+        # print(f'\t\t({bx}, {by})')
 
-    v = []
-    if ang >= 45:
-        v = np.array([(lx, ly), (tx, ty), (rx, ry), (bx, by)])
-    else:
-        v = np.array([(tx, ty), (rx, ry), (bx, by), (lx, ly)])
+        v = []
+        if abs(ang) >= 45:
+            # >>>>>>>>> 2022-11-14 before change
+            # v = np.array([(lx, ly), (tx, ty), (rx, ry), (bx, by)])
+            # >>>>>>>>> 2022-11-14 before change
+            v = np.array([(lx, ly), (tx, ty), (rx, ry), (bx, by)])
+            # print(f'{[]} -> {v}')
+        else:
+            v = np.array([(tx, ty), (rx, ry), (bx, by), (lx, ly)])
 
-    r = [v[0][0] - offset, v[0][1] - offset, v[2][0] + offset, v[2][1] + offset]
-
-    if r[0] > r[2]:
-        r[0], r[2] = r[2], r[0]
-    if r[1] > r[3]:
-        r[1], r[3] = r[3], r[1]
-
-    return v, r
+        r = [v[0][0] - offset, v[0][1] - offset, v[2][0] + offset, v[2][1] + offset]
+        return v, r
+    except Exception as e:
+        print(e)
 
 
 def extract_lp(img, rect, offset=0):
@@ -131,20 +286,30 @@ def extract_lp(img, rect, offset=0):
 
 
 def perspective_warp(img, vertices):
-    dw = LP_WIDTH
-    dh = LP_HEIGHT
+    dw = LP_WIDTH - 2
+    dh = LP_HEIGHT - 2
 
     src = vertices
     dst = [(0, 0), (dw, 0), (dw, dh), (0, dh)]
-
     # print(f'{vertices} -> {dst}')
 
     warp_src, warp_dst = np.float32(src), np.float32(dst)
     # np.array(src, dtype=np.float32), np.array(dst, dtype=np.float32)
 
     mat = cv2.getPerspectiveTransform(warp_src, warp_dst)
-
     return cv2.warpPerspective(img, mat, dsize=(dw, dh))
+
+
+def draw_lp(img, r, v, stroke_width, offset=0):
+    R, G, B = random.randint(192, 256), random.randint(192, 256), random.randint(192, 256)
+    color = (R, G, B)
+    icolor = (0xff - R, 0xff - G, 0xff - B)
+
+    cv2.line(img, v[0], v[1], color, stroke_width)
+    cv2.line(img, v[1], v[2], color, stroke_width)
+    cv2.line(img, v[2], v[3], color, stroke_width)
+    cv2.line(img, v[3], v[0], color, stroke_width)
+    return
 
 
 def draw_rect(img, r, v, stroke_width, offset=0):
@@ -159,9 +324,78 @@ def draw_rect(img, r, v, stroke_width, offset=0):
     return
 
 
+def compute(img, min_percentile, max_percentile):
+    """计算分位点，目的是去掉图1的直方图两头的异常情况"""
+    max_percentile_pixel = np.percentile(img, max_percentile)
+    min_percentile_pixel = np.percentile(img, min_percentile)
+
+    return max_percentile_pixel, min_percentile_pixel
+
+
+def aug(src, seq):
+    """图像亮度增强"""
+    f = False
+    src = np.array(src)
+    src.flags.writeable = True
+    ret = get_lightness(src) / 140
+
+    if get_lightness(src) > 140:
+        f = True
+        ret = get_lightness(src) / 140 - 0.68
+        print("第" + str(seq) + "张，图片亮度足够，减弱" + str(ret))
+    else:
+        print("第" + str(seq) + "张，图片亮度不足，增强" + str(ret))
+
+    # 先计算分位点，去掉像素值中少数异常值，这个分位点可以自己配置。
+    # 比如1中直方图的红色在0到255上都有值，但是实际上像素值主要在0到20内。
+    max_percentile_pixel, min_percentile_pixel = compute(src, 1, 99)
+
+    # 去掉分位值区间之外的值
+    src[src >= max_percentile_pixel] = max_percentile_pixel
+    src[src <= min_percentile_pixel] = min_percentile_pixel
+    # 将分位值区间拉伸到0到255，这里取了255*0.1与255*0.9是因为可能会出现像素值溢出的情况，所以最好不要设置为0到255。
+    out = np.zeros(src.shape, src.dtype)
+
+    cv2.normalize(src, out, 255 * 0.1, 255 * 0.9, cv2.NORM_MINMAX)
+    fI = out / 255.0
+    gamma = 1 + ret + 0.08 * ret / 0.6
+    if not f:
+        # 伽马变换
+        gamma = 0.3 + ret
+        # print("第" + str(seq) + "张" + str(1.8 * ret))
+        # print("第" + str(seq) + "张" + str(gamma))
+
+    out = np.power(fI, gamma)
+
+    return out, ret
+
+
+def get_lightness(src):
+    # 计算亮度
+    hsv_image = cv2.cvtColor(src, cv2.COLOR_BGR2HSV)
+    lightness = hsv_image[:, :, 2].mean()
+
+    return lightness
+
+
 def cast_shadows(lp_img):
-    img_gray = cv2.cvtColor(lp_img, cv2.COLOR_RGB2GRAY)
-    _, result = cv2.threshold(img_gray, 0x88, 0xff, cv2.THRESH_BINARY)
+
+    lp_test, ret = aug(lp_img, "1")
+
+    lp_test = lp_test * 255
+
+    lp_test = lp_test.astype("uint8")
+
+    img_gray = cv2.cvtColor(lp_test, cv2.COLOR_RGB2GRAY)
+
+    # print(img_gray_test)
+
+    # cv2.imshow(str(124), img_gray)
+    # >>>>>>>>>> 2022-11-14 before change
+    # img_gray = cv2.cvtColor(lp_img, cv2.COLOR_RGB2GRAY)
+    # <<<<<<< 2022-11-14 before change
+
+    _, result = cv2.threshold(img_gray, 0x8f, 0xff, cv2.THRESH_BINARY)
 
     height, width = result.shape
     dot = [0 for _ in range(width)]
@@ -355,6 +589,7 @@ def crop_chars(lp_img, right_start, char_width, gap_width, std=False):
             rect = [r_anchors[i + 1], 0, r_anchors[i], height - 0]
             offset = 6
             # draw_rect(self.lp_img, rect, offset)
+            draw_rect(lp_img, rect, 4, 4)
             tmp = crop_rect(lp_gray_img, rect, offset)
             r_success_count += 1
             if r_success_count == 6:
@@ -373,20 +608,22 @@ def crop_chars(lp_img, right_start, char_width, gap_width, std=False):
         if l_visible == 1:
             rect = [l_anchors[i], 0, l_anchors[i + 1], height - 0]
             offset = 6
-            # draw_rect(self.lp_img, rect, offset)
+            # draw_rect(lp_img, rect, offset)
+            draw_rect(lp_img, rect, 4, 4)
             tmp = crop_rect(lp_gray_img, rect, offset)
             l_success_count += 1
+            # show_gray_img(tmp)  # 车牌前2字
             if l_success_count == 3:
                 break
             try:
                 tmp = cv2.resize(tmp, (45, 140))
             except Exception as e:
                 continue
-            # show_gray_img(tmp)
+            #
             sliced_chars.append(tmp)
         l_visible = (l_visible + 1) % 2
-
-    # show_image(self.lp_img)
+    # show_gray_img(lp_img)
+    # show_image(lp_img)  #定位
 
     sliced_imgs = []
 
@@ -397,7 +634,7 @@ def crop_chars(lp_img, right_start, char_width, gap_width, std=False):
     for sd in sliced_digits:
         sliced_imgs.append(sd)
 
-    return sliced_imgs
+    return sliced_imgs, lp_img
 
 
 LP_WIDTH = 440
@@ -419,7 +656,8 @@ class LPLocator(object):
 
         self.img = None
         self.lp_img = None
-
+        self.lp_img_with_rects = None
+        self.shadow_image = None
         self.w = None
         self.h = None
 
@@ -434,13 +672,22 @@ class LPLocator(object):
         finally:
             return
 
+    def return_image(self):
+
+        print(f'{self.img is None} {self.shadow_image is None} {self.lp_img_with_rects is None}')
+
+        if self.lp_img_with_rects is None:
+            return self.img, self.shadow_image, self.lp_img
+        else:
+            return self.img, self.shadow_image, self.lp_img_with_rects
+
     def show_self(self, color_map):
         plt.imshow(self.img, cmap=color_map)
         plt.show()
 
     def preprocess(self):
 
-        self.img = cv2.resize(self.img, (640, 480))
+        # self.img = cv2.resize(self.img, (640, 480))
 
         img = self.img
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
@@ -462,7 +709,7 @@ class LPLocator(object):
         vertices = []
         dots = []
         slices = []
-
+        hull = []
         if self.w == 440 and self.h == 140:
             rect = [0, 0, 440, 140]
             vertices = [
@@ -476,21 +723,38 @@ class LPLocator(object):
         else:
             img_gray, img_HSV, img_B, img_R = self.preprocess()
             img_bin = preprocess(img_gray, img_HSV, img_B, img_R)
+
             pts = find_lp(img_bin)
-
             if pts is None:
+                self.lp_img = self.img
+                self.shadow_image, _ = cast_shadows(self.lp_img)
                 return self.img, self.lp_img, []
-
-            vertices, rect = locate_rect(pts, -6)
-
-        self.lp_img = perspective_warp(self.img, vertices)
-        draw_rect(self.img, rect, vertices, 4)
-        # show_image(self.img)
+            hull = locate_convex(pts)
+            vertices, rect = locate_rect(pts, 5)
+        res = []
+        for i in range(4):
+            res.append([np.array(vertices[i])])
+        # print(np.array(res).shape)
+        ret = None
+        if len(hull) > 0:
+            ret = find_four_points(hull)
+        if ret is not None:
+            vertices = ret
+            self.lp_img = perspective_warp(self.img, vertices)
+            cv2.polylines(self.img, [np.array(ret)], True, (random.randint(120, 250), random.randint(120, 250), random.randint(120, 250)), 3)
+        else:
+            self.lp_img = perspective_warp(self.img, vertices)
+            draw_lp(self.img, rect, vertices, 3)
+        # draw_rect(self.img, rect, vertices, 2)
         lp_shadow_img, dots = cast_shadows(self.lp_img)
+
         right_start, char_w, gap_w = analyze_shadows(lp_shadow_img, dots)
+        self.shadow_image = lp_shadow_img
+        # show_image(lp_shadow_img) #垂直投影
 
         if char_w is not None and gap_w is not None:
-            slices = crop_chars(self.lp_img, right_start, char_w, gap_w, self.std_flag)
+            slices, lp_img = crop_chars(self.lp_img, right_start, char_w, gap_w, self.std_flag)
+            self.lp_img_with_rects = lp_img
             return self.img, self.lp_img, slices
         else:
             return self.img, self.lp_img, []

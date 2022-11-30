@@ -7,6 +7,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 EN_ROOT = '../dataset_v2/en/'
 ZH_ROOT = '../dataset_v2/zh/'
 EN_TFR_PATH = '../model/license_plate_en.tfrecords'
@@ -119,6 +120,7 @@ def generate_records(mtype):
 
         # print(f'label: {label} name: {name}')
 
+
         path = picked_root + str(name) + '/'
 
         for img_name in os.listdir(path):
@@ -180,10 +182,35 @@ def parse_dataset(tfr_name):
         # plt.imshow(restored_img, cmap='gray')
         # plt.show()
 
-    np_imgs = np.array(imgs)
-    np_labels = np.array(labels)
+    train_imgs = []
+    train_labels = []
+    test_imgs = []
+    test_labels = []
 
-    return np_imgs, np_labels, [], []
+    tot = min(len(imgs), len(labels))
+    test_portion = 6               # TODO origin: -1
+    if test_portion > 0:
+        for i in range(tot):
+            if i % test_portion == 0:
+                test_imgs.append(imgs[i])
+                test_labels.append(labels[i])
+            else:
+                train_imgs.append(imgs[i])
+                train_labels.append(labels[i])
+    else:
+        for i in range(tot):
+            train_imgs.append(imgs[i])
+            train_labels.append(labels[i])
+
+        test_imgs = train_imgs[5::10]
+        test_labels = train_labels[5::10]
+
+    np_train_imgs = np.array(train_imgs)
+    np_train_labels = np.array(train_labels)
+    np_test_imgs = np.array(test_imgs)
+    np_test_labels = np.array(test_labels)
+
+    return np_train_imgs, np_train_labels, np_test_imgs, np_test_labels
 
     # train_imgs = []
     # train_lbls = []

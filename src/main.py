@@ -1,17 +1,22 @@
 import os
+import math
+import sys
+import cv2
 
-import PyQt5
-
-from src.GUI import lsrGUI
-from src.LPLocator.LPLocator import LPLocator
+# from src.LPLocator.LPLocator import LPLocator
 from CSVReader.CSVReader import CSVReader
 from Dataset.DatasetManip import generate_records, parse_dataset
 from LPIdentification.LPIdentification import LPIdentification
-
+from LPLocator.LPLocator import LPLocator
 import matplotlib.pyplot as plt
+
+from src.RecordsMng.RecordsMng import RecordsMng
 
 BASE_DATASET_PATH = '../CLPD_1200/'
 LP_TEST_IMGS_PATH = '../lp/'
+
+EN_TFR_PATH = '../model/license_plate_en.tfrecords'
+ZH_TFR_PATH = '../model/license_plate_zh.tfrecords'
 
 
 def result_coversion(result_arr):
@@ -26,12 +31,21 @@ def result_coversion(result_arr):
     return ret_str
 
 
-if __name__ == "__main__":
+records_manager = RecordsMng(gen_new=False, train_new=True)        # TODO UNTEST
+en_identifier, zh_identifier = records_manager.get_identifiers()
+
+
+def get_summary():
+    print(records_manager.en_identifier.h5_model.summary())
+    print(records_manager.en_identifier.h5_model.summary())
+
+
+def Main(photo_path):
 
     print("|--License Plate Recognition--|")
 
-    plt.rcParams['font.sans-serif'] = ['SimHei']
-    plt.rcParams['axes.unicode_minus'] = False
+    # plt.rcParams['font.sans-serif'] = ['SimHei']
+    # plt.rcParams['axes.unicode_minus'] = False
 
     # desired_csv_size = 100
     # cr = CSVReader(desired_csv_size)
@@ -40,50 +54,38 @@ if __name__ == "__main__":
     # csv_data = cr.get_csv_data()
     # print(f'CSV data loaded.')
 
-    en_trf_path = generate_records('en')
-    zh_trf_path = generate_records('zh')
+    # files = os.listdir(LP_TEST_IMGS_PATH)
 
-    en_train_images, en_train_labels, en_test_images, en_test_labels = parse_dataset(en_trf_path)
-    zh_train_images, zh_train_labels, zh_test_images, zh_test_labels = parse_dataset(zh_trf_path)
-    print(f'TFRecords loaded.')
-
-    en_identifier = LPIdentification(en_trf_path, en_train_images, en_train_labels, en_test_images, en_test_labels)
-    zh_identifier = LPIdentification(zh_trf_path, zh_train_images, zh_train_labels, zh_test_images, zh_test_labels)
-    print(f'Model training ready.')
-
-    train_new = False
-    en_identifier.load_h5_model(train_new)
-    zh_identifier.load_h5_model(train_new)
-    if train_new:
-        print(f'Successfully trained new .h5 model.')
+    current_file = photo_path
+    print(f'Loaded {current_file}.')
+    # >>>>>>>>>>> 2022-11-14 模型展示
+    get_summary()
+    locator = LPLocator(current_file)
+    img_lp_highlighted, img_lp_cropped, char_imgs = locator.rough_process()     # TODO crashed when no palette detected
+    img, shadow_image, img_with_rects = locator.return_image()
+    if len(char_imgs) == 0:
+        print(f'Failed to identify the license...')
+        final_result = '识别失败'
     else:
-        print(f'Successfully loaded existing .h5 model.')
+        result = zh_identifier.identify_chars([char_imgs[0]])
+        result.append(en_identifier.identify_chars(char_imgs[1:]))
+        final_result = result_coversion(result)
 
-    files = os.listdir(LP_TEST_IMGS_PATH)
+    return img_lp_highlighted, shadow_image, img_with_rects, final_result
 
-    for i in files[:-3]:
-        current_file = LP_TEST_IMGS_PATH + i
-        print(f'Loaded {current_file}.')
+    # plt.imshow(img_lp_highlighted)
+    # plt.imshow(shadow_image)
+    # plt.imshow(sliced_photos)
+    # plt.title(result_coversion(result))
+    # plt.show()
 
-        lpltr = LPLocator(current_file)
-        img_lp_highlighted, img_lp_cropped, char_imgs = lpltr.rough_process()
+    # os.system("pause")
 
-        if len(char_imgs) == 0:
-            print(f'Failed to identify the license...')
-        else:
-            result = zh_identifier.identify_chars([char_imgs[0]])
-            result.append(en_identifier.identify_chars(char_imgs[1:]))
+    # os.system("pause")
 
-            plt.imshow(img_lp_highlighted)
-            plt.title(result_coversion(result))
-            plt.show()
-
-        # os.system("pause")
-
-        # img = CLPDImage(current_file)
-        #
-        # img.get_csv_data(csv_data[img.get_id()])
-        #
-        # img.preprocess()
-        # # img.write_all()
-
+    # img = CLPDImage(current_file)
+    #
+    # img.get_csv_data(csv_data[img.get_id()])
+    #
+    # img.preprocess()
+    # # img.write_all()
